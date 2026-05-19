@@ -20,6 +20,7 @@ dependencies = [
     "kedro-viz>=6.7.0",
     "scikit-learn~=1.5.1",
     "seaborn~=0.12.1",
+    "openpyxl>=3.1.5",
 ]
 
 [project.scripts]
@@ -83,3 +84,6 @@ select = [
 ignore = [
     "E501",
 ]
+
+[tool.kedro_telemetry]
+project_id = "41f24dde43534b718e41346f3dbfe161"
