@@ -21,6 +21,8 @@ dependencies = [
     "scikit-learn~=1.5.1",
     "seaborn~=0.12.1",
     "openpyxl>=3.1.5",
+    "pytest>=7.4.4",
+    "pytest-cov>=6.3.0",
 ]
 
 [project.scripts]
