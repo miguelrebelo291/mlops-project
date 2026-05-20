@@ -94,3 +94,17 @@ dummy_confusion_matrix:
   type: matplotlib.MatplotlibDataset
   filepath: data/08_reporting/dummy_confusion_matrix.png
   versioned: true
+
+mortgage_origination:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/mortgage_origination.csv
+  load_args:
+    sep: "|"
+    header: null
+
+mortgage_performance:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/sample_svcg_2005.txt
+  load_args:
+    sep: "|"
+    header: null
