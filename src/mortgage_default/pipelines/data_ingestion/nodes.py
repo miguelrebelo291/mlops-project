@@ -117,11 +117,16 @@ def create_target_variable(performance_data: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with one row per loan and a binary 'default' column (0 or 1).
     """
-    performance_data["zero_balance_code"] = (
-        performance_data["zero_balance_code"].astype(str).str.strip().str.zfill(2)
+    df = performance_data.copy()
+    df["zero_balance_code"] = (
+        pd.to_numeric(df["zero_balance_code"], errors="coerce")
+        .astype("Int64")
+        .astype(str)
+        .str.replace("<NA>", "nan")
+        .str.zfill(2)
     )
     target = (
-        performance_data.groupby("loan_sequence_number")["zero_balance_code"]
+        df.groupby("loan_sequence_number")["zero_balance_code"]
         .apply(lambda codes: int(any(code in DEFAULT_CODES for code in codes)))
         .reset_index()
         .rename(columns={"zero_balance_code": "default"})
