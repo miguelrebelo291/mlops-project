@@ -39,20 +39,34 @@
 # (transcoding), templating and a way to reuse arguments that are frequently repeated. See more here:
 # https://docs.kedro.org/en/stable/data/data_catalog.html
 
-raw_origination_data:
+raw_origination_data_2005:
   type: pandas.CSVDataset
   filepath: data/01_raw/sample_orig_2005.txt
   load_args:
     sep: "|"
     header: null
+    low_memory: false
 
-raw_performance_data:
+raw_performance_data_2005:
   type: pandas.CSVDataset
   filepath: data/01_raw/sample_svcg_2005.txt
   load_args:
     sep: "|"
     header: null
+    low_memory: false
 
 origination_data_named:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/origination_data_named.parquet
+
+performance_data_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/performance_data_named.parquet
+
+target_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/target_data.parquet
+
+model_input_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data.parquet
