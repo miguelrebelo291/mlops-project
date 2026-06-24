@@ -74,3 +74,13 @@ model_input_data:
 model_input_validated:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/model_input_validated.parquet
+
+# Cleaned modeling dataset after data_cleaning pipeline
+origination_data_cleaned:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/model_input_cleaned.parquet
+
+# Summary/statistics from the cleaning step
+origination_cleaning_statistics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/data_cleaning_statistics.json
