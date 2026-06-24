@@ -70,3 +70,7 @@ target_data:
 model_input_data:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/model_input_data.parquet
+
+model_input_validated:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_validated.parquet
