@@ -1,0 +1,10 @@
+feature_store:
+  # Nome do projeto no Hopsworks. Deixa em branco para usar o projeto por defeito
+  # da tua API key. A key vem da variável de ambiente HOPSWORKS_API_KEY.
+  project: "mortgage_default"
+  feature_group_name: mortgage_origination_features
+  feature_group_version: 1
+  description: "Features de originação para previsão de default (Freddie Mac 2005)"
+  online_enabled: false
+  # Hopsworks serverless (engine python) só aceita DELTA, que precisa de hops-deltalake.
+  time_travel_format: "DELTA"

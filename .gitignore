@@ -28,6 +28,13 @@ data/**
 # ignore file based logs
 *.log
 
+# local MLflow tracking (backend + runs)
+mlflow.db
+mlruns/
+
+# temporary local stub generator (placeholder até ao input real do data_cleaning)
+make_stub.py
+
 ##########################
 # Common files
 
