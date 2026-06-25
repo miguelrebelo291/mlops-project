@@ -24,6 +24,9 @@ dependencies = [
     "pytest>=7.4.4",
     "pytest-cov>=6.3.0",
     "great-expectations>=1.18.1",
+    "mlflow>=3.14.0",
+    "hopsworks>=5.0.0",
+    "hops-deltalake>=1.4.0.post121",
 ]
 
 [project.scripts]

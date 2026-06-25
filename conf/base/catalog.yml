@@ -75,7 +75,7 @@ model_input_validated:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/model_input_validated.parquet
 
-# Cleaned modeling dataset after data_cleaning pipeline
+# Cleaned modeling dataset after data_cleaning pipeline (input da feature engineering)
 origination_data_cleaned:
   type: pandas.ParquetDataset
   filepath: data/03_primary/model_input_cleaned.parquet
@@ -84,3 +84,35 @@ origination_data_cleaned:
 origination_cleaning_statistics:
   type: json.JSONDataset
   filepath: data/08_reporting/data_cleaning_statistics.json
+
+# --- feature_engineering ---
+features_train:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_train.parquet
+
+features_test:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_test.parquet
+
+feature_transformers:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/feature_transformers.pkl
+
+feature_engineering_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/feature_engineering_metrics.json
+
+# --- feature_store (Hopsworks) ---
+feature_store_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/feature_store_metadata.json
+
+# --- feature_engineering_inference ---
+# Input de inferência: empréstimos novos a prever (placeholder: usa os dados limpos)
+origination_data_inference:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/model_input_cleaned.parquet
+
+features_inference:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_inference.parquet
