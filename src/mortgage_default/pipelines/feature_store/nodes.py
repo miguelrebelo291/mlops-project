@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 ID_COL = "loan_sequence_number"
 
+import os
 
 def _sanitize_feature_names(df: pd.DataFrame) -> pd.DataFrame:
     """Hopsworks só aceita nomes de features em minúsculas e com underscores.
@@ -39,8 +40,17 @@ def upload_to_feature_store(features: pd.DataFrame, parameters: dict) -> dict:
     if ID_COL not in features.columns:
         raise ValueError(f"'{ID_COL}' tem de existir para ser a primary key.")
 
+    api_key = os.getenv("HOPSWORKS_API_KEY")
+    project_name = parameters.get("project") or os.getenv("HOPSWORKS_PROJECT") or None
+
+    if not api_key:
+        raise EnvironmentError(
+            "HOPSWORKS_API_KEY is not set. Load your .env before running Kedro."
+        )
+
     project = hopsworks.login(
-        project=parameters.get("project") or None,
+        project=project_name,
+        api_key_value=api_key,
     )
     fs = project.get_feature_store()
 

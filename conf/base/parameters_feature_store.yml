@@ -1,7 +1,7 @@
 feature_store:
   # Nome do projeto no Hopsworks. Deixa em branco para usar o projeto por defeito
   # da tua API key. A key vem da variável de ambiente HOPSWORKS_API_KEY.
-  project: "mortgage_default"
+  project:
   feature_group_name: mortgage_origination_features
   feature_group_version: 1
   description: "Features de originação para previsão de default (Freddie Mac 2005)"
