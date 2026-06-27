@@ -24,7 +24,7 @@ def run_data_quality(model_input_data: pd.DataFrame) -> pd.DataFrame:
     and stop the pipeline if they fail. Non-critical expectations log a warning.
 
     Args:
-        model_input_data: joined origination and target dataset.
+        model_input_data: joined origination and target dataset (all years combined).
     Returns:
         The same DataFrame if all critical checks pass.
     Raises:
@@ -41,15 +41,23 @@ def run_data_quality(model_input_data: pd.DataFrame) -> pd.DataFrame:
     suite = context.suites.add(gx.ExpectationSuite(name="mortgage_quality_suite"))
 
     # Structure
-    suite.add_expectation(gx.expectations.ExpectTableColumnCountToEqual(value=33))
-    suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(min_value=40000, max_value=60000))
+    # 34 columns = 32 origination + 'default' + 'year'
+    suite.add_expectation(gx.expectations.ExpectTableColumnCountToEqual(value=34))
+    # 9 anos * ~50k empréstimos por ano
+    suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(min_value=300000, max_value=600000))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="loan_sequence_number"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="default"))
+    suite.add_expectation(gx.expectations.ExpectColumnToExist(column="year"))
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column="loan_sequence_number"))
 
     # Target
     suite.add_expectation(gx.expectations.ExpectColumnValuesToBeInSet(
         column="default", value_set=[0, 1]
+    ))
+
+    # Year range (2000-2008)
+    suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+        column="year", min_value=2000, max_value=2008
     ))
 
     # credit_score
