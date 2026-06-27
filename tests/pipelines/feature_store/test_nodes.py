@@ -1,4 +1,4 @@
-"""Testes unitários para os nodes do pipeline feature_store."""
+"""Unit tests for the feature_store pipeline nodes."""
 import pandas as pd
 import pytest
 
@@ -19,7 +19,7 @@ def test_sanitize_feature_names_lowercases():
 
 
 def test_upload_requires_id_column():
-    df = pd.DataFrame({"occupancy_status_o": [1, 0]})  # sem loan_sequence_number
+    df = pd.DataFrame({"occupancy_status_o": [1, 0]})  # no loan_sequence_number
     params = {"feature_group_name": "fg", "feature_group_version": 1}
     with pytest.raises(ValueError, match="loan_sequence_number"):
         upload_to_feature_store(df, params)

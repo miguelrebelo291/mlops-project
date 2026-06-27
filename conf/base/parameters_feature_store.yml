@@ -1,10 +1,10 @@
 feature_store:
-  # Nome do projeto no Hopsworks. Deixa em branco para usar o projeto por defeito
-  # da tua API key. A key vem da variável de ambiente HOPSWORKS_API_KEY.
+  # Hopsworks project name. Leave empty to use the default project of your
+  # API key. The key comes from the HOPSWORKS_API_KEY environment variable.
   project: "mortgage_default"
   feature_group_name: mortgage_origination_features
   feature_group_version: 1
-  description: "Features de originação para previsão de default (Freddie Mac 2005)"
+  description: "Origination features for default prediction (Freddie Mac 2005)"
   online_enabled: false
-  # Hopsworks serverless (engine python) só aceita DELTA, que precisa de hops-deltalake.
+  # Hopsworks serverless (python engine) only accepts DELTA, which needs hops-deltalake.
   time_travel_format: "DELTA"

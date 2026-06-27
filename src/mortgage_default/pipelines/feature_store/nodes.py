@@ -9,10 +9,10 @@ ID_COL = "loan_sequence_number"
 
 
 def _sanitize_feature_names(df: pd.DataFrame) -> pd.DataFrame:
-    """Hopsworks só aceita nomes de features em minúsculas e com underscores.
+    """Hopsworks only accepts feature names in lowercase with underscores.
 
-    O one-hot gera colunas como 'occupancy_status_O' (com maiúsculas), por isso
-    normalizamos tudo antes de inserir no feature group.
+    One-hot encoding produces columns like 'occupancy_status_O' (with uppercase),
+    so we normalise everything before inserting into the feature group.
     """
     df = df.copy()
     df.columns = [
@@ -22,22 +22,22 @@ def _sanitize_feature_names(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def upload_to_feature_store(features: pd.DataFrame, parameters: dict) -> dict:
-    """Insere as features num Feature Group do Hopsworks.
+    """Insert the features into a Hopsworks Feature Group.
 
-    A API key é lida da variável de ambiente HOPSWORKS_API_KEY (nunca em código).
+    The API key is read from the HOPSWORKS_API_KEY environment variable (never in code).
 
     Args:
-        features: tabela de features (tem de incluir loan_sequence_number).
-        parameters: config do feature group (parameters_feature_store.yml).
+        features: feature table (must include loan_sequence_number).
+        parameters: feature group config (parameters_feature_store.yml).
 
     Returns:
-        Dicionário com o nome/versão do feature group e nº de linhas inseridas.
+        Dictionary with the feature group name/version and number of inserted rows.
     """
-    import hopsworks  # import tardio: só precisa do pacote quando se faz upload
+    import hopsworks  # lazy import: the package is only needed when uploading
 
     features = _sanitize_feature_names(features)
     if ID_COL not in features.columns:
-        raise ValueError(f"'{ID_COL}' tem de existir para ser a primary key.")
+        raise ValueError(f"'{ID_COL}' must exist to be the primary key.")
 
     project = hopsworks.login(
         project=parameters.get("project") or None,
@@ -63,5 +63,5 @@ def upload_to_feature_store(features: pd.DataFrame, parameters: dict) -> dict:
         "n_rows": int(len(features)),
         "n_features": int(features.shape[1]),
     }
-    logger.info("Inserido no Hopsworks Feature Store: %s", result)
+    logger.info("Inserted into Hopsworks Feature Store: %s", result)
     return result

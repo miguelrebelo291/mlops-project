@@ -1,9 +1,9 @@
 """
 Pipeline 'feature_engineering_inference'.
 
-Aplica a empréstimos novos as MESMAS transformações aprendidas no treino,
-carregando o artefacto 'feature_transformers' (sem fit, sem split) para
-garantir consistência e evitar leakage.
+Applies to new loans the SAME transformations learned during training,
+loading the 'feature_transformers' artifact (no fit, no split) to
+ensure consistency and avoid leakage.
 """
 
 from .pipeline import create_pipeline

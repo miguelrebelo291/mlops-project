@@ -75,7 +75,7 @@ model_input_validated:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/model_input_validated.parquet
 
-# Cleaned modeling dataset after data_cleaning pipeline (input da feature engineering)
+# Cleaned modeling dataset after data_cleaning pipeline (feature engineering input)
 origination_data_cleaned:
   type: pandas.ParquetDataset
   filepath: data/03_primary/model_input_cleaned.parquet
@@ -108,7 +108,7 @@ feature_store_metadata:
   filepath: data/08_reporting/feature_store_metadata.json
 
 # --- feature_engineering_inference ---
-# Input de inferência: empréstimos novos a prever (placeholder: usa os dados limpos)
+# Inference input: new loans to predict (placeholder: uses the cleaned data)
 origination_data_inference:
   type: pandas.ParquetDataset
   filepath: data/03_primary/model_input_cleaned.parquet

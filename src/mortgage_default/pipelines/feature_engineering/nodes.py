@@ -10,13 +10,13 @@ DATE_COLS = ["first_payment_date", "maturity_date"]
 
 
 def drop_unused_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove colunas pouco úteis, mantendo sempre ID e target."""
+    """Drop low-value columns while always keeping the ID and target."""
     to_drop = [c for c in COLS_TO_DROP if c in df.columns]
     return df.drop(columns=to_drop)
 
 
 def engineer_date_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Transforma datas YYYYMM em features numéricas e cria o prazo do empréstimo."""
+    """Turn YYYYMM dates into numeric features and derive the loan term."""
     df = df.copy()
     for col in DATE_COLS:
         if col in df.columns:
@@ -32,9 +32,9 @@ def engineer_date_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def split_data(df: pd.DataFrame, parameters: dict) -> tuple:
-    """Split treino/teste estratificado pelo target (classes desequilibradas).
+    """Train/test split stratified by the target (imbalanced classes).
 
-    O split é feito ANTES de qualquer fit, para não haver leakage.
+    The split happens BEFORE any fit so there is no leakage.
     """
     train_df, test_df = train_test_split(
         df,
@@ -46,9 +46,9 @@ def split_data(df: pd.DataFrame, parameters: dict) -> tuple:
 
 
 def fit_feature_transformers(train_df: pd.DataFrame) -> dict:
-    """Aprende as transformações SÓ no treino (medianas de imputação e categorias).
+    """Learn the transformations ONLY on the training set (imputation medians and categories).
 
-    Devolve um dicionário (artefacto) reutilizável na pipeline de inferência.
+    Returns a dictionary (artifact) reusable by the inference pipeline.
     """
     feature_cols = [c for c in train_df.columns if c not in (ID_COL, TARGET_COL)]
     numeric_cols = train_df[feature_cols].select_dtypes(include="number").columns.tolist()
@@ -65,22 +65,22 @@ def fit_feature_transformers(train_df: pd.DataFrame) -> dict:
 
 
 def apply_feature_transformers(df: pd.DataFrame, transformers: dict) -> pd.DataFrame:
-    """Aplica imputação + one-hot usando parâmetros aprendidos no treino.
+    """Apply imputation + one-hot using parameters learned on the training set.
 
-    Garante as mesmas colunas no treino, teste e inferência.
+    Guarantees the same columns across train, test and inference.
     """
     df = df.copy()
 
-    # imputação numérica com as medianas do treino
+    # numeric imputation with the training medians
     for col, val in transformers["impute_values"].items():
         if col in df.columns:
             df[col] = df[col].fillna(val)
 
-    # one-hot das categóricas
+    # one-hot encode the categoricals
     cat_cols = transformers["categorical_cols"]
     df = pd.get_dummies(df, columns=cat_cols)
 
-    # forçar exatamente as colunas dummy vistas no treino
+    # force exactly the dummy columns seen during training
     expected = [
         f"{c}_{cat}" for c in cat_cols for cat in transformers["categories"][c]
     ]
@@ -101,13 +101,13 @@ def log_feature_engineering(
     transformers: dict,
     parameters: dict,
 ) -> dict:
-    """Regista no MLflow os parâmetros e métricas da feature engineering.
+    """Log the feature engineering parameters and metrics to MLflow.
 
-    Cria um run único com a configuração do split, o nº de features geradas e
-    a taxa de default em treino/teste (sanity check da estratificação).
+    Creates a single run with the split configuration, the number of features
+    produced and the default rate in train/test (a stratification sanity check).
 
     Returns:
-        Dicionário com as métricas registadas (também guardado no catálogo).
+        Dictionary with the logged metrics (also stored in the catalog).
     """
     feature_cols = [
         c for c in features_train.columns if c not in (ID_COL, TARGET_COL)

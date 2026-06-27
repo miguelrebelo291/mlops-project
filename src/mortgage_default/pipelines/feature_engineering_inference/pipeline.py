@@ -1,11 +1,11 @@
 """Pipeline 'feature_engineering_inference'.
 
-Reutiliza os nodes do pipeline de treino, mas SÓ a parte de transformação:
-- drop_unused_columns e engineer_date_features (iguais ao treino)
-- apply_feature_transformers carregando 'feature_transformers' do disco
+Reuses the training pipeline nodes, but ONLY the transformation part:
+- drop_unused_columns and engineer_date_features (same as training)
+- apply_feature_transformers loading 'feature_transformers' from disk
 
-Não há fit nem split aqui: os parâmetros (medianas, categorias, colunas) vêm
-do treino, o que garante exatamente as mesmas features e zero leakage.
+There is no fit or split here: the parameters (medians, categories, columns) come
+from training, which guarantees exactly the same features and zero leakage.
 """
 from kedro.pipeline import Node, Pipeline
 

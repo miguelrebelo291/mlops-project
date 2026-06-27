@@ -1,4 +1,4 @@
-"""Pipeline 'feature_store' — upload das features para o Hopsworks."""
+"""Pipeline 'feature_store' — uploads the features to Hopsworks."""
 from kedro.pipeline import Node, Pipeline
 
 from .nodes import upload_to_feature_store

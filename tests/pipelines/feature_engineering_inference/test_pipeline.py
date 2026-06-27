@@ -1,7 +1,7 @@
-"""Testes do pipeline feature_engineering_inference.
+"""Tests for the feature_engineering_inference pipeline.
 
-Garante que a inferência reutiliza os transformers do treino e produz
-exatamente as mesmas features (mesmas colunas, sem fit nem leakage).
+Ensures inference reuses the training transformers and produces
+exactly the same features (same columns, no fit, no leakage).
 """
 import numpy as np
 import pandas as pd
@@ -37,30 +37,30 @@ def _prepare(df):
 
 
 def test_inference_matches_training_columns(raw_df):
-    # transformers aprendidos no "treino"
+    # transformers learned on "training"
     train = _prepare(raw_df)
     transformers = fit_feature_transformers(train)
     features_train = apply_feature_transformers(train, transformers)
 
-    # dados de inferência diferentes (outros valores), mas mesmo schema
+    # different inference data (other values), but same schema
     infer_raw = raw_df.copy()
     infer_raw["credit_score"] = [800, 640, 700, 710, np.nan, 690, 720, 650, 730, 660]
     features_inf = apply_feature_transformers(_prepare(infer_raw), transformers)
 
-    # mesmas colunas e mesma ordem que o treino
+    # same columns and same order as training
     assert list(features_inf.columns) == list(features_train.columns)
-    # sem missing (imputação com as medianas do treino)
+    # no missing values (imputation with the training medians)
     assert features_inf.isna().sum().sum() == 0
 
 
 def test_inference_without_target(raw_df):
-    # na inferência real pode não existir a coluna 'default' (é o que se prevê)
+    # in real inference the 'default' column may not exist (it is what we predict)
     train = _prepare(raw_df)
     transformers = fit_feature_transformers(train)
 
     infer_raw = raw_df.drop(columns=["default"])
     features_inf = apply_feature_transformers(_prepare(infer_raw), transformers)
 
-    # o ID mantém-se e não rebenta sem o target
+    # the ID stays and it does not break without the target
     assert "loan_sequence_number" in features_inf.columns
     assert features_inf.isna().sum().sum() == 0
