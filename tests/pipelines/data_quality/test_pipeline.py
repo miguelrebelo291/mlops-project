@@ -24,7 +24,7 @@ VALID_COLUMNS = [
     "number_of_borrowers", "seller_name", "servicer_name", "super_conforming_flag",
     "pre_relief_refinance_loan_sequence_number", "special_eligibility_program",
     "relief_refinance_indicator", "property_valuation_method",
-    "interest_only_indicator", "mi_cancellation_indicator", "default",
+    "interest_only_indicator", "mi_cancellation_indicator", "default", "year",
 ]
 
 
@@ -65,6 +65,7 @@ def valid_df():
         "interest_only_indicator":     ["N", "N"],
         "mi_cancellation_indicator":   [7, 7],
         "default":                [0, 1],
+        "year":                   [2001, 2002],
     })
 
 
@@ -116,5 +117,11 @@ def test_duplicate_loan_sequence_number_raises(valid_df):
 def test_wrong_column_count_raises(valid_df):
     df = valid_df.copy()
     df["extra_column"] = [0, 0]
+    with pytest.raises(ValueError):
+        run_data_quality(df)
+
+
+def test_missing_year_column_raises(valid_df):
+    df = valid_df.drop(columns=["year"])
     with pytest.raises(ValueError):
         run_data_quality(df)
