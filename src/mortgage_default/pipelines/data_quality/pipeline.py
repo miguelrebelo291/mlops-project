@@ -10,7 +10,7 @@ def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline([
         Node(
             func=run_data_quality,
-            inputs="model_input_data",
+            inputs="model_input_data_all",
             outputs="model_input_validated",
             name="run_data_quality_node",
         ),

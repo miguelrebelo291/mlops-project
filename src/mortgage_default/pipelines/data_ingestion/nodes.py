@@ -76,19 +76,18 @@ PERFORMANCE_COLUMNS = [
 
 DEFAULT_CODES = ["02", "03", "09"]
 
-def assign_origination_columns_names (raw_data: pd.DataFrame) -> pd.DataFrame:
+
+def assign_origination_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
     """Assign column names to the origination data.
-    
+
     Args:
         raw_data: raw origination dataset without column names.
-
     Returns:
         DataFrame with assigned column names.
-    
     """
-
     raw_data.columns = ORIGINATION_COLUMNS
     return raw_data
+
 
 def assign_performance_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
     """Assign column names to the performance data.
@@ -103,6 +102,7 @@ def assign_performance_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
         raw_data["current_loan_delinquency_status"].astype(str)
     )
     return raw_data
+
 
 def create_target_variable(performance_data: pd.DataFrame) -> pd.DataFrame:
     """Aggregate performance data to loan level and create binary default target.
@@ -148,3 +148,18 @@ def join_origination_with_target(
     joined = origination_data.merge(target_data, on="loan_sequence_number", how="left")
     joined["default"] = joined["default"].fillna(0).astype(int)
     return joined
+
+
+def concatenate_years(*dfs: pd.DataFrame, years: list[int] = None) -> pd.DataFrame:
+    """Concatena os datasets de múltiplos anos, adicionando coluna 'year'."""
+    if years is None:
+        from mortgage_default.pipelines.data_ingestion.pipeline import YEARS
+        years = YEARS
+    
+    labeled = []
+    for df, year in zip(dfs, years):
+        df = df.copy()
+        df["year"] = year
+        labeled.append(df)
+    
+    return pd.concat(labeled, ignore_index=True)

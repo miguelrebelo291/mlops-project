@@ -15,6 +15,7 @@ from mortgage_default.pipelines.data_ingestion.nodes import (
     assign_performance_columns_names,
     create_target_variable,
     join_origination_with_target,
+    concatenate_years,
 )
 
 
@@ -64,6 +65,26 @@ def target_data():
     return pd.DataFrame({
         "loan_sequence_number": ["A", "B"],
         "default": [1, 0],
+    })
+
+
+@pytest.fixture
+def model_input_2001():
+    """Synthetic model input dataset for year 2001."""
+    return pd.DataFrame({
+        "loan_sequence_number": ["2001A00001", "2001A00002"],
+        "credit_score": [700, 650],
+        "default": [0, 1],
+    })
+
+
+@pytest.fixture
+def model_input_2002():
+    """Synthetic model input dataset for year 2002."""
+    return pd.DataFrame({
+        "loan_sequence_number": ["2002A00001", "2002A00002"],
+        "credit_score": [720, 680],
+        "default": [0, 0],
     })
 
 
@@ -163,3 +184,35 @@ def test_join_loan_without_target_gets_zero(origination_named, target_data):
 def test_join_default_is_integer(origination_named, target_data):
     result = join_origination_with_target(origination_named, target_data)
     assert result["default"].dtype == int
+
+
+# ── concatenate_years ────────────────────────────────────────────────────────
+
+def test_concatenate_years_row_count(model_input_2001, model_input_2002):
+    result = concatenate_years(model_input_2001, model_input_2002)
+    assert len(result) == 4
+
+
+def test_concatenate_years_has_year_column(model_input_2001, model_input_2002):
+    result = concatenate_years(model_input_2001, model_input_2002)
+    assert "year" in result.columns
+
+
+def test_concatenate_years_extracts_year(model_input_2001, model_input_2002):
+    from mortgage_default.pipelines.data_ingestion.pipeline import YEARS
+    result = concatenate_years(model_input_2001, model_input_2002)
+    # a função atribui anos pela posição em YEARS
+    expected_years = set(YEARS[:2])
+    assert set(result["year"].unique().tolist()) == expected_years
+
+
+def test_concatenate_years_year_is_integer(model_input_2001, model_input_2002):
+    result = concatenate_years(model_input_2001, model_input_2002)
+    assert pd.api.types.is_integer_dtype(result["year"])
+
+
+def test_concatenate_years_preserves_columns(model_input_2001, model_input_2002):
+    result = concatenate_years(model_input_2001, model_input_2002)
+    assert "loan_sequence_number" in result.columns
+    assert "credit_score" in result.columns
+    assert "default" in result.columns
