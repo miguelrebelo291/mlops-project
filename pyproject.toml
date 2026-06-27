@@ -27,6 +27,8 @@ dependencies = [
     "mlflow>=3.14.0",
     "hopsworks>=5.0.0",
     "hops-deltalake==1.4.0.post121; sys_platform != 'win32'",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 
 [project.scripts]

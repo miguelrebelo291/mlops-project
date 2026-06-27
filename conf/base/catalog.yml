@@ -262,3 +262,27 @@ origination_data_inference:
 features_inference:
   type: pandas.ParquetDataset
   filepath: data/04_feature/features_inference.parquet
+
+
+#DEPOIS MUDEM QUANDO FIZEREM A PIPELINE ASR
+#################
+model_training_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_training_metrics.json
+
+model_training_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_training_metadata.json
+
+model_test_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/model_test_predictions.parquet
+
+model_inference_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/model_inference_predictions.parquet
+
+model_search_results:
+  type: pandas.ParquetDataset
+  filepath: data/08_reporting/model_search_results.parquet
+##########################
