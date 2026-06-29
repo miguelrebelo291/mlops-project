@@ -1,0 +1,7 @@
+model_explainability:
+  model_uri: data/06_models/mlflow_model
+  metadata_path: data/08_reporting/model_training_metadata.json
+  output_dir: data/08_reporting
+  sample_size: 1000
+  random_state: 42
+  max_display: 20

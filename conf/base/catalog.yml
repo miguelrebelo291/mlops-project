@@ -334,3 +334,10 @@ model_search_results:
   type: pandas.ParquetDataset
   filepath: data/08_reporting/model_search_results.parquet
 ##########################
+
+
+#################
+#SHAP
+shap_metrics:
+  type: kedro_datasets.json.JSONDataset
+  filepath: data/08_reporting/shap_metrics.json
