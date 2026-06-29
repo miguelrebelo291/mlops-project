@@ -6,6 +6,7 @@ model_train:
   threshold: 0.5
   experiment_name: mortgage_default_model_search3
   run_name: random_search_three_models
+  registered_model_name: mortgage_default_classifier
   add_timestamp_to_run_name: true
   model_output_path: data/06_models/mlflow_model
   tracking_uri: sqlite:///mlflow.db

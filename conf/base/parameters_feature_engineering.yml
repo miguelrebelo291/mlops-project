@@ -7,3 +7,7 @@
 feature_engineering:
   test_size: 0.2
   random_state: 42
+  tracking_uri: sqlite:///mlflow.db
+  experiment_name: mortgage_default_feature_engineering
+  run_name: feature_engineering
+
