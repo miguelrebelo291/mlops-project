@@ -244,8 +244,8 @@ def _log_sklearn_model(
     signature: Any,
     input_example: pd.DataFrame,
     artifact_name: str = "model",
+    registered_model_name: str | None = None,
 ) -> None:
-    """Log sklearn model with MLflow compatibility across versions."""
     kwargs = {
         "sk_model": model,
         "signature": signature,
@@ -253,16 +253,13 @@ def _log_sklearn_model(
         "serialization_format": mlflow.sklearn.SERIALIZATION_FORMAT_CLOUDPICKLE,
     }
 
+    if registered_model_name:
+        kwargs["registered_model_name"] = registered_model_name
+
     try:
-        mlflow.sklearn.log_model(
-            name=artifact_name,
-            **kwargs,
-        )
+        mlflow.sklearn.log_model(name=artifact_name, **kwargs)
     except TypeError:
-        mlflow.sklearn.log_model(
-            artifact_path=artifact_name,
-            **kwargs,
-        )
+        mlflow.sklearn.log_model(artifact_path=artifact_name, **kwargs)
 
 
 def _save_sklearn_model(

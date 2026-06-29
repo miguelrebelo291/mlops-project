@@ -331,7 +331,13 @@ def clean_origination_data(
         df["default"] = pd.to_numeric(df["default"], errors="coerce")
         stats["default_missing_count"] = int(df["default"].isna().sum())
 
-        df["default"] = df["default"].fillna(0).astype(int)
+        if df["default"].isna().any():
+            raise ValueError("Missing target values found. Do not fill labels with 0.")
+
+        if not df["default"].isin([0, 1]).all():
+            raise ValueError("Target column must contain only 0/1 values.")
+
+        df["default"] = df["default"].astype(int)
 
     # Drop columns that are not useful/safe for this baseline cleaned modeling dataset.
     cols_to_drop = [col for col in COLUMNS_TO_DROP if col in df.columns]
