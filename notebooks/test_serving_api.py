@@ -7,7 +7,7 @@ import pandas as pd
 
 
 API_URL = "http://127.0.0.1:8000"
-FEATURES_PATH = Path("../data/04_feature/features_inference.parquet")
+FEATURES_PATH = Path("..data/04_feature/features_inference.parquet")
 
 
 def get_json(path: str) -> dict:

@@ -16,17 +16,25 @@ def drop_unused_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def engineer_date_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Transforma datas YYYYMM em features numéricas e cria o prazo do empréstimo."""
+    """Transform date columns into numeric features."""
     df = df.copy()
-    for col in DATE_COLS:
-        if col in df.columns:
-            df[f"{col}_year"] = df[col].astype(int) // 100
-            df[f"{col}_month"] = df[col].astype(int) % 100
 
-    if {"first_payment_date", "maturity_date"}.issubset(df.columns):
-        fp = df["first_payment_date"].astype(int)
-        mt = df["maturity_date"].astype(int)
-        df["loan_term_months"] = (mt // 100 - fp // 100) * 12 + (mt % 100 - fp % 100)
+    for col in DATE_COLS:
+        if col not in df.columns:
+            continue
+
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[f"{col}_year"] = df[col].dt.year
+            df[f"{col}_month"] = df[col].dt.month
+        else:
+            values = pd.to_numeric(df[col], errors="coerce")
+            df[f"{col}_year"] = values // 100
+            df[f"{col}_month"] = values % 100
+
+    if {"first_payment_date_year", "maturity_date_year"}.issubset(df.columns):
+        df["loan_term_years"] = (
+            df["maturity_date_year"] - df["first_payment_date_year"]
+        )
 
     return df.drop(columns=[c for c in DATE_COLS if c in df.columns])
 

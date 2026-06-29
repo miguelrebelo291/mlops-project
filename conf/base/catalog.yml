@@ -255,14 +255,66 @@ feature_store_metadata:
 # ── Feature engineering inference ────────────────────────────────────────────
 
 # Input de inferência: empréstimos novos a prever (placeholder: usa os dados limpos)
-origination_data_inference:
-  type: pandas.ParquetDataset
-  filepath: data/03_primary/model_input_cleaned.parquet
+# ── Inference raw input ──────────────────────────────────────────────────────
+raw_origination_data_inference:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/sample_orig_2006.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
 
+raw_performance_data_inference:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/sample_svcg_2006.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+# ── Labeled inference ingestion outputs ──────────────────────────────────────
+origination_data_inference_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/origination_data_inference_named.parquet
+
+performance_data_inference_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/performance_data_inference_named.parquet
+
+target_data_inference:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/target_data_inference.parquet
+
+model_input_data_inference_labeled:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_inference_labeled.parquet
+
+# ── Labeled inference cleaning output ────────────────────────────────────────
+model_input_data_inference_cleaned:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/model_input_data_inference_cleaned.parquet
+
+inference_cleaning_statistics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/inference_cleaning_statistics.json
+
+# ── Labeled inference features ───────────────────────────────────────────────
 features_inference:
   type: pandas.ParquetDataset
   filepath: data/04_feature/features_inference.parquet
 
+# ── Labeled inference predictions/evaluation ─────────────────────────────────
+model_inference_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/model_inference_predictions.parquet
+
+evaluated_inference_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/evaluated_inference_predictions.parquet
+
+inference_evaluation_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/inference_evaluation_metrics.json
 
 #DEPOIS MUDEM QUANDO FIZEREM A PIPELINE ASR
 #################
@@ -277,10 +329,6 @@ model_training_metadata:
 model_test_predictions:
   type: pandas.ParquetDataset
   filepath: data/07_model_output/model_test_predictions.parquet
-
-model_inference_predictions:
-  type: pandas.ParquetDataset
-  filepath: data/07_model_output/model_inference_predictions.parquet
 
 model_search_results:
   type: pandas.ParquetDataset

@@ -1,15 +1,13 @@
-"""Pipeline 'feature_engineering_inference'.
+"""Feature engineering for labeled inference.
 
-Reutiliza os nodes do pipeline de treino, mas SÓ a parte de transformação:
-- drop_unused_columns e engineer_date_features (iguais ao treino)
-- apply_feature_transformers carregando 'feature_transformers' do disco
-
-Não há fit nem split aqui: os parâmetros (medianas, categorias, colunas) vêm
-do treino, o que garante exatamente as mesmas features e zero leakage.
+Uses the transformers fitted during training.
+The default target is allowed to pass through so evaluation can happen later,
+but model_inference will drop it before prediction.
 """
+
 from kedro.pipeline import Node, Pipeline
 
-from ..feature_engineering.nodes import (
+from mortgage_default.pipelines.feature_engineering.nodes import (
     apply_feature_transformers,
     drop_unused_columns,
     engineer_date_features,
@@ -21,7 +19,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             Node(
                 func=drop_unused_columns,
-                inputs="origination_data_inference",
+                inputs="model_input_data_inference_cleaned",
                 outputs="inference_no_unused",
                 name="fe_inf_drop_unused_columns_node",
             ),

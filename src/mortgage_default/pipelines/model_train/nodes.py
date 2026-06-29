@@ -1,9 +1,10 @@
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
-
+from uuid import uuid4
 import mlflow
 import mlflow.sklearn
 import numpy as np
@@ -134,7 +135,9 @@ def _predict_probabilities(model: Pipeline, X: pd.DataFrame) -> np.ndarray:
     return model.predict(X).astype(float)
 
 
-def _build_model_spaces(random_state: int) -> dict[str, tuple[Pipeline, dict[str, list[Any]]]]:
+def _build_model_spaces(
+    random_state: int,
+) -> dict[str, tuple[Pipeline, dict[str, list[Any]]]]:
     """Define model families and random-search parameter spaces."""
     logistic_regression = Pipeline(
         steps=[
@@ -286,7 +289,7 @@ def train_validate_test_model(
     features_test: pd.DataFrame,
     parameters: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], pd.DataFrame, pd.DataFrame]:
-    """Run random search for three model families and export the best model.
+    """Run random search for model families and export the best model.
 
     Data split:
     - features_train/features_test come from feature_engineering
@@ -302,7 +305,16 @@ def train_validate_test_model(
     threshold = parameters.get("threshold", 0.5)
 
     experiment_name = parameters.get("experiment_name", "mortgage_default_model_search")
-    run_name = parameters.get("run_name", "random_search_three_models")
+    base_run_name = parameters.get("run_name", "random_search_three_models")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_suffix = f"{timestamp}_{uuid4().hex[:8]}"
+
+    if parameters.get("add_timestamp_to_run_name", True):
+        run_name = f"{base_run_name}_{run_suffix}"
+    else:
+        run_name = base_run_name
+
     model_output_path = Path(
         parameters.get("model_output_path", "data/06_models/mlflow_model")
     )
@@ -363,17 +375,23 @@ def train_validate_test_model(
         raise ValueError(f"Unknown model names in parameters: {sorted(unknown_models)}")
 
     tracking_uri = parameters.get("tracking_uri")
-
     if tracking_uri:
         mlflow.set_tracking_uri(tracking_uri)
 
     mlflow.set_experiment(experiment_name)
+
+    print(f"MLflow tracking URI: {mlflow.get_tracking_uri()}")
+    print(f"MLflow experiment name: {experiment_name}")
+    print(f"MLflow parent run name: {run_name}")
 
     all_search_results: list[pd.DataFrame] = []
     model_summaries: list[dict[str, Any]] = []
 
     with mlflow.start_run(run_name=run_name) as parent_run:
         parent_run_id = parent_run.info.run_id
+
+        print(f"MLflow parent run ID: {parent_run_id}")
+        print(f"MLflow artifact URI: {parent_run.info.artifact_uri}")
 
         mlflow.log_params(
             {
@@ -391,17 +409,22 @@ def train_validate_test_model(
                 "n_val_rows": len(X_val),
                 "n_test_rows": len(X_test),
                 "models": ",".join(requested_models),
+                "run_timestamp": timestamp,
             }
         )
 
         for model_family in requested_models:
             base_model, param_distributions = model_spaces[model_family]
+            child_run_name = f"{model_family}_random_search_{run_suffix}"
 
             with mlflow.start_run(
-                run_name=f"{model_family}_random_search",
+                run_name=child_run_name,
                 nested=True,
             ) as child_run:
                 child_run_id = child_run.info.run_id
+
+                print(f"MLflow child run ID for {model_family}: {child_run_id}")
+                print(f"MLflow child run name for {model_family}: {child_run_name}")
 
                 search = RandomizedSearchCV(
                     estimator=base_model,
@@ -449,6 +472,7 @@ def train_validate_test_model(
                 mlflow.log_params(
                     {
                         "model_family": model_family,
+                        "child_run_name": child_run_name,
                         "best_params": json.dumps(search.best_params_, default=str),
                     }
                 )
@@ -479,6 +503,7 @@ def train_validate_test_model(
                 )
                 search_results["child_run_id"] = child_run_id
                 search_results["parent_run_id"] = parent_run_id
+                search_results["child_run_name"] = child_run_name
 
                 all_search_results.append(search_results)
 
@@ -486,6 +511,7 @@ def train_validate_test_model(
                     {
                         "model_family": model_family,
                         "child_run_id": child_run_id,
+                        "child_run_name": child_run_name,
                         "best_cv_score": float(search.best_score_),
                         "best_params": search.best_params_,
                         **model_metrics,
@@ -541,6 +567,7 @@ def train_validate_test_model(
             {
                 "selected_model_family": best_model_family,
                 "selected_child_run_id": best_summary["child_run_id"],
+                "selected_child_run_name": best_summary["child_run_name"],
                 "selected_best_params": json.dumps(
                     best_summary["best_params"],
                     default=str,
@@ -571,8 +598,11 @@ def train_validate_test_model(
     metrics_output = {
         **final_test_metrics,
         "parent_run_id": parent_run_id,
+        "run_name": run_name,
+        "run_timestamp": timestamp,
         "selected_model_family": best_model_family,
         "selected_child_run_id": best_summary["child_run_id"],
+        "selected_child_run_name": best_summary["child_run_name"],
         "selection_metric": selection_metric,
         "selection_metric_value": best_summary.get(selection_metric),
         "model_output_path": str(model_output_path),
@@ -587,6 +617,7 @@ def train_validate_test_model(
         "parent_run_id": parent_run_id,
         "experiment_name": experiment_name,
         "run_name": run_name,
+        "run_timestamp": timestamp,
         "model_output_path": str(model_output_path),
         "target_column": target_column,
         "id_column": id_column,
@@ -598,6 +629,7 @@ def train_validate_test_model(
         "selection_metric": selection_metric,
         "selected_model_family": best_model_family,
         "selected_child_run_id": best_summary["child_run_id"],
+        "selected_child_run_name": best_summary["child_run_name"],
         "selected_best_params": best_summary["best_params"],
         "feature_columns": feature_columns,
         "dropped_non_numeric_columns": dropped_non_numeric_columns,
