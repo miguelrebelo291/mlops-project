@@ -73,33 +73,28 @@ def fit_feature_transformers(train_df: pd.DataFrame) -> dict:
 
 
 def apply_feature_transformers(df: pd.DataFrame, transformers: dict) -> pd.DataFrame:
+    """Aplica imputação + one-hot usando parâmetros aprendidos no treino.
+
+    Garante as mesmas colunas no treino, teste e inferência.
+    """
     df = df.copy()
 
-    numeric_cols = transformers["numeric_cols"]
-    cat_cols = transformers["categorical_cols"]
-
+    # imputação numérica com as medianas do treino
     for col, val in transformers["impute_values"].items():
-        if col not in df.columns:
-            df[col] = val
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(val)
+        if col in df.columns:
+            df[col] = df[col].fillna(val)
 
-    for col in cat_cols:
-        if col not in df.columns:
-            df[col] = "__MISSING__"
-        df[col] = df[col].astype("string").fillna("__MISSING__").astype(str)
-
+    # one-hot das categóricas
+    cat_cols = transformers["categorical_cols"]
     df = pd.get_dummies(df, columns=cat_cols)
 
+    # forçar exatamente as colunas dummy vistas no treino
     expected = [
-        f"{c}_{cat}"
-        for c in cat_cols
-        for cat in transformers["categories"][c]
+        f"{c}_{cat}" for c in cat_cols for cat in transformers["categories"][c]
     ]
-
     for col in expected:
         if col not in df.columns:
             df[col] = 0
-
     prefixes = tuple(f"{c}_" for c in cat_cols)
     for col in list(df.columns):
         if col.startswith(prefixes) and col not in expected:
@@ -133,31 +128,15 @@ def log_feature_engineering(
         "test_default_rate": round(float(features_test[TARGET_COL].mean()), 4),
     }
 
-    tracking_uri = parameters.get("tracking_uri")
-    experiment_name = parameters.get(
-        "experiment_name",
-        "mortgage_default_feature_engineering",
-    )
-    run_name = parameters.get("run_name", "feature_engineering")
-
-    if tracking_uri:
-        mlflow.set_tracking_uri(tracking_uri)
-
-    mlflow.set_experiment(experiment_name)
-
-    with mlflow.start_run(
-        run_name=run_name,
-        nested=mlflow.active_run() is not None,
-    ):
+    mlflow.set_experiment("feature_engineering")
+    with mlflow.start_run(run_name="feature_engineering"):
         mlflow.log_param("test_size", parameters["test_size"])
         mlflow.log_param("random_state", parameters["random_state"])
         mlflow.log_param("n_numeric_features", len(transformers["numeric_cols"]))
         mlflow.log_param(
-            "n_categorical_features",
-            len(transformers["categorical_cols"]),
+            "n_categorical_features", len(transformers["categorical_cols"])
         )
-        mlflow.log_param("dropped_columns", ",".join(COLS_TO_DROP))
-
+        mlflow.log_param("dropped_columns", COLS_TO_DROP)
         for key, value in metrics.items():
             mlflow.log_metric(key, value)
 

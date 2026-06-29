@@ -44,7 +44,7 @@ def run_data_quality(model_input_data: pd.DataFrame) -> pd.DataFrame:
     # 34 columns = 32 origination + 'default' + 'year'
     suite.add_expectation(gx.expectations.ExpectTableColumnCountToEqual(value=34))
     # 9 anos * ~50k empréstimos por ano
-    suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(min_value=30000, max_value=600000))
+    suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(min_value=300000, max_value=600000))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="loan_sequence_number"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="default"))
     suite.add_expectation(gx.expectations.ExpectColumnToExist(column="year"))
