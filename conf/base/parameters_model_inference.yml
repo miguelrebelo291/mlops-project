@@ -3,3 +3,4 @@ model_inference:
   target_column: default
   id_column: loan_sequence_number
   threshold: 0.5
+  test_year: 2006

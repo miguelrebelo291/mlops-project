@@ -136,6 +136,7 @@ def evaluate_labeled_inference(
         "false_negatives": int(fn),
         "true_positives": int(tp),
     }
+    metrics["test_year"] = parameters.get("test_year")
 
     if y_true.nunique() == 2:
         metrics["average_precision"] = float(average_precision_score(y_true, y_prob))

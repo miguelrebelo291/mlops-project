@@ -105,48 +105,48 @@ def assign_performance_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_target_variable(performance_data: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate performance data to loan level and create binary default target.
+    """Create binary default target from loan performance data.
 
-    A loan is considered a default if its zero_balance_code is ever 02, 03, or 09:
-    - 02: Third Party Sale
-    - 03: Short Sale or Charge Off
-    - 09: REO Disposition (foreclosure)
-
-    Args:
-        performance_data: performance dataset with column names assigned.
-    Returns:
-        DataFrame with one row per loan and a binary 'default' column (0 or 1).
+    default = 1 if the loan has a serious zero-balance/default event:
+    02 = Third Party Sale
+    03 = Short Sale or Charge Off
+    09 = REO Disposition / foreclosure
     """
     df = performance_data.copy()
-    df["zero_balance_code"] = (
+
+    df["zero_balance_code_clean"] = (
         pd.to_numeric(df["zero_balance_code"], errors="coerce")
         .astype("Int64")
-        .astype(str)
-        .str.replace("<NA>", "nan")
+        .astype("string")
         .str.zfill(2)
     )
+
     target = (
-        df.groupby("loan_sequence_number")["zero_balance_code"]
-        .apply(lambda codes: int(any(code in DEFAULT_CODES for code in codes)))
+        df.groupby("loan_sequence_number")["zero_balance_code_clean"]
+        .apply(lambda codes: int(codes.isin(DEFAULT_CODES).any()))
         .reset_index()
-        .rename(columns={"zero_balance_code": "default"})
+        .rename(columns={"zero_balance_code_clean": "default"})
     )
+
     return target
 
 
 def join_origination_with_target(
-    origination_data: pd.DataFrame, target_data: pd.DataFrame
+    origination_data: pd.DataFrame,
+    target_data: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Join origination data with the target variable.
+    """Join origination data with known target labels."""
+    joined = origination_data.merge(
+        target_data,
+        on="loan_sequence_number",
+        how="inner",
+    )
 
-    Args:
-        origination_data: origination dataset with column names assigned.
-        target_data: loan-level DataFrame with 'default' column.
-    Returns:
-        DataFrame with origination features and binary 'default' target.
-    """
-    joined = origination_data.merge(target_data, on="loan_sequence_number", how="left")
-    joined["default"] = joined["default"].fillna(0).astype(int)
+    if joined["default"].isna().any():
+        raise ValueError("Missing target values after joining origination and target.")
+
+    joined["default"] = joined["default"].astype(int)
+
     return joined
 
 

@@ -4,7 +4,7 @@ model_train:
   validation_size: 0.2
   random_state: 42
   threshold: 0.5
-  experiment_name: mortgage_default_model_search2
+  experiment_name: mortgage_default_model_search3
   run_name: random_search_three_models
   add_timestamp_to_run_name: true
   model_output_path: data/06_models/mlflow_model
