@@ -2,24 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Needed for packages that build native extensions, e.g. twofish
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONPATH=/app/src
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_COMPILE=1
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-serving.txt .
+RUN pip install --no-cache-dir --no-compile -r requirements-serving.txt
 
-COPY pyproject.toml README.md ./
 COPY src ./src
 COPY conf ./conf
 
 COPY data/04_feature/feature_transformers.pkl ./data/04_feature/feature_transformers.pkl
 COPY data/06_models/mlflow_model ./data/06_models/mlflow_model
 COPY data/08_reporting/model_training_metadata.json ./data/08_reporting/model_training_metadata.json
-
-RUN pip install --no-cache-dir -e .
 
 EXPOSE 8000
 

@@ -10,10 +10,9 @@ DATE_COLS = ["first_payment_date", "maturity_date"]
 
 
 def drop_unused_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove colunas pouco úteis, mantendo sempre ID e target."""
-    to_drop = [c for c in COLS_TO_DROP if c in df.columns]
-    return df.drop(columns=to_drop)
-
+    """Drop columns that should not be used as model features."""
+    df = df.copy()
+    return df.drop(columns=COLS_TO_DROP, errors="ignore")
 
 def engineer_date_features(df: pd.DataFrame) -> pd.DataFrame:
     """Transform date columns into numeric features."""

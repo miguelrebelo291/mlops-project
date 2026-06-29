@@ -2,133 +2,74 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
-from mortgage_default.serving.model_service import ModelNotReadyError, ModelService
-from mortgage_default.serving.schemas import (
-    BatchFeaturePayload,
-    BatchPredictionResponse,
-    FeaturePayload,
-    HealthResponse,
-    MetadataResponse,
-    PredictionResponse,
-)
-
+from mortgage_default.serving.model_service import ModelService
+from mortgage_default.serving.schemas import BatchLoanRequest, LoanRequest
 
 app = FastAPI(
-    title="Mortgage Default Model Serving API",
+    title="Mortgage Default API",
     version="0.1.0",
-    description="Serves the selected mortgage default model trained by the Kedro/MLflow pipeline.",
+    description="Simple API for serving the mortgage default model.",
 )
 
-model_service = ModelService()
+service = ModelService()
 
 
 @app.get("/")
 def root() -> dict[str, str]:
     return {
-        "message": "Mortgage Default Model Serving API",
+        "message": "Mortgage Default API",
         "docs": "/docs",
-        "health": "/health",
     }
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health")
 def health() -> dict[str, Any]:
-    status = model_service.status()
-
-    return {
-        "status": "ok" if status["is_ready"] else "not_ready",
-        "model_ready": status["is_ready"],
-        "model_uri": status["model_uri"],
-        "metadata_path": status["metadata_path"],
-        "selected_model_family": status["selected_model_family"],
-        "threshold": status["threshold"],
-        "load_error": status["load_error"],
-    }
+    status = service.status()
+    status["status"] = "ok" if service.ready else "not_ready"
+    return status
 
 
-@app.get("/metadata", response_model=MetadataResponse)
+@app.get("/metadata")
 def metadata() -> dict[str, Any]:
-    if not model_service.is_ready:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Model is not ready. Load error: {model_service.load_error}",
-        )
-
-    assert model_service.metadata is not None
-
-    return {
-        "model_uri": model_service.model_uri,
-        "metadata_path": str(model_service.metadata_path),
-        "selected_model_family": model_service.metadata.get("selected_model_family"),
-        "threshold": model_service.metadata.get("threshold"),
-        "target_column": model_service.metadata.get("target_column"),
-        "id_column": model_service.metadata.get("id_column"),
-        "n_features": len(model_service.metadata.get("feature_columns", [])),
-        "scoring": model_service.metadata.get("scoring"),
-        "selection_metric": model_service.metadata.get("selection_metric"),
-    }
-
-
-@app.post("/predict", response_model=BatchPredictionResponse)
-def predict(request: BatchFeaturePayload) -> dict[str, Any]:
     try:
-        predictions = model_service.predict_many(
+        return service.metadata_info()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/predict-one")
+def predict_one(request: LoanRequest) -> dict[str, Any]:
+    try:
+        return service.predict_one(
+            features=request.features,
+            threshold=request.threshold,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/predict")
+def predict(request: BatchLoanRequest) -> dict[str, Any]:
+    try:
+        predictions = service.predict_many(
             rows=request.rows,
             threshold=request.threshold,
         )
-
         return {
             "n_rows": len(predictions),
             "predictions": predictions,
         }
-
-    except ModelNotReadyError as exc:
+    except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    except ValueError as exc:
+    except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Unexpected prediction error: {exc}",
-        ) from exc
 
-
-@app.post("/predict-one", response_model=PredictionResponse)
-def predict_one(request: FeaturePayload) -> dict[str, Any]:
-    try:
-        return model_service.predict_one(
-            features=request.features,
-            threshold=request.threshold,
-        )
-
-    except ModelNotReadyError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Unexpected prediction error: {exc}",
-        ) from exc
-
-
-@app.post("/reload-model", response_model=HealthResponse)
+@app.post("/reload-model")
 def reload_model() -> dict[str, Any]:
-    global model_service
-
-    model_service = ModelService()
-    status = model_service.status()
-
-    return {
-        "status": "ok" if status["is_ready"] else "not_ready",
-        "model_ready": status["is_ready"],
-        "model_uri": status["model_uri"],
-        "metadata_path": status["metadata_path"],
-        "selected_model_family": status["selected_model_family"],
-        "threshold": status["threshold"],
-        "load_error": status["load_error"],
-    }
+    service.load()
+    status = service.status()
+    status["status"] = "ok" if service.ready else "not_ready"
+    return status
