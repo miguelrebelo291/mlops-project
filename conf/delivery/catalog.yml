@@ -1,0 +1,360 @@
+# ── Raw data ────────────────────────────────────────────────────────────────
+
+# --- 2000 ---
+raw_origination_data_2000:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2000.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2000:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2000.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2000:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2000.parquet
+
+# --- 2001 ---
+raw_origination_data_2001:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2001.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2001:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2001.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2001:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2001.parquet
+
+# --- 2002 ---
+raw_origination_data_2002:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2002.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2002:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2002.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2002:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2002.parquet
+
+# --- 2003 ---
+raw_origination_data_2003:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2003.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2003:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2003.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2003:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2003.parquet
+
+# --- 2004 ---
+raw_origination_data_2004:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2004.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2004:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2004.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2004:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2004.parquet
+
+# --- 2005 ---
+raw_origination_data_2005:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2005.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2005:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2005.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2005:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2005.parquet
+
+# --- 2006 ---
+raw_origination_data_2006:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2006.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2006:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2006.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2006:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2006.parquet
+
+# --- 2007 ---
+raw_origination_data_2007:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2007.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2007:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2007.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2007:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2007.parquet
+
+# --- 2008 ---
+raw_origination_data_2008:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2008.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+raw_performance_data_2008:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_svcg_2008.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+model_input_data_2008:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_2008.parquet
+
+# --- dataset completo com todos os anos ---
+model_input_data_all:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_all.parquet
+
+# ── Intermediates (legado 2005 — usado por data_quality, data_cleaning, feature_engineering) ──
+# NOTA: estas entradas (origination_data_named, performance_data_named, target_data,
+# model_input_data) parecem ser resíduo do pipeline data_ingestion original de
+# 2005-apenas, anterior à versão multi-ano. Não sei se algum pipeline atual ainda
+# as usa — NÃO REMOVI, confirma antes de apagar.
+
+origination_data_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/origination_data_named.parquet
+
+performance_data_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/performance_data_named.parquet
+
+target_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/target_data.parquet
+
+model_input_data:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data.parquet
+
+model_input_validated:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_validated.parquet
+
+# nsd sample
+nsd_sample_raw:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/nsd_sample.parquet
+
+# ── Primary ──────────────────────────────────────────────────────────────────
+
+# Cleaned modeling dataset after data_cleaning pipeline (input do model_train)
+origination_data_cleaned:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/model_input_cleaned.parquet
+
+# Summary/statistics from the cleaning step
+origination_cleaning_statistics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/data_cleaning_statistics.json
+
+# ── Feature engineering / model_train outputs ─────────────────────────────────
+
+features_train:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_train.parquet
+
+features_test:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_test.parquet
+
+feature_transformers:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/feature_transformers.pkl
+
+# NOTA: feature_engineering_metrics e feature_store_metadata pertencem ao
+# pipeline feature_engineering original (não usado pelo teu model_train).
+# Mantido caso a equipa ainda use esse pipeline em paralelo — confirma.
+feature_engineering_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/feature_engineering_metrics.json
+
+feature_store_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/feature_store_metadata.json
+
+# ── model_predict (inference, raw origination only — no performance file) ────
+
+raw_origination_data_inference:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/delivery/sample_orig_2007.txt
+  load_args:
+    sep: "|"
+    header: null
+    low_memory: false
+
+origination_data_inference_named:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/origination_data_inference_named.parquet
+
+origination_data_inference_cleaned:
+  type: pandas.ParquetDataset
+  filepath: data/03_primary/model_input_data_inference_cleaned.parquet
+
+inference_cleaning_statistics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/inference_cleaning_statistics.json
+
+features_inference:
+  type: pandas.ParquetDataset
+  filepath: data/04_feature/features_inference.parquet
+
+model_inference_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/model_inference_predictions.parquet
+
+# NOTA: estas duas entradas (evaluated_inference_predictions,
+# inference_evaluation_metrics) só são produzidas se chamares
+# evaluate_labeled_inference manualmente (não está no pipeline por
+# omissão, já que dados de produção reais não têm target). Mantidas
+# para esse uso opcional.
+evaluated_inference_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/evaluated_inference_predictions.parquet
+
+inference_evaluation_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/inference_evaluation_metrics.json
+
+# NOTA: estas duas (target_data_inference, model_input_data_inference_labeled)
+# pertenciam à versão anterior do model_predict que usava performance_data_inference
+# (já removida do catálogo). Não são produzidas por nenhum node atual —
+# candidatas a remoção, mas não apaguei. Confirma antes de remover.
+target_data_inference:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/target_data_inference.parquet
+
+model_input_data_inference_labeled:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_inference_labeled.parquet
+
+# ── model_train / model_evaluate outputs ──────────────────────────────────────
+
+model_training_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_training_metrics.json
+
+model_training_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_training_metadata.json
+
+model_test_predictions:
+  type: pandas.ParquetDataset
+  filepath: data/07_model_output/model_test_predictions.parquet
+
+model_search_results:
+  type: pandas.ParquetDataset
+  filepath: data/08_reporting/model_search_results.parquet
+
+selected_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/selected_model.pkl
+
+train_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/train_metadata.json
+
+# ── model_explainability (SHAP) ────────────────────────────────────────────────
+
+shap_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/shap_metrics.json
+
+# ── data_drift (not yet built) ─────────────────────────────────────────────────
+
+data_drift_report:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/data_drift_feature_report.csv
+
+data_drift_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/data_drift_metrics.json

@@ -166,3 +166,4 @@ venv.bak/
 
 # mlflow local runs
 mlruns/*
+!data/01_raw/delivery/*.txt
