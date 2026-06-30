@@ -8,7 +8,10 @@ from mortgage_default.serving.schemas import BatchLoanRequest, LoanRequest
 app = FastAPI(
     title="Mortgage Default API",
     version="0.1.0",
-    description="Simple API for serving the mortgage default model.",
+    description=(
+        "API for serving the mortgage default model. "
+        "Requests should contain raw Freddie Mac origination-style fields."
+    ),
 )
 
 service = ModelService()

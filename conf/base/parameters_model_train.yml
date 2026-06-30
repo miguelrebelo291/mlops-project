@@ -1,21 +1,37 @@
 model_train:
   target_column: default
   id_column: loan_sequence_number
+
   validation_size: 0.2
   random_state: 42
+
+  #threshold é decidida pelo modelo mas isto é fallback
   threshold: 0.5
-  experiment_name: mortgage_default_model_search3
-  run_name: random_search_three_models
+  threshold_strategy: maximize_f1
+  beta: 1.0
+
+  experiment_name: mortgage_default_model_search
+  run_name: holdout_random_search_tree_models
   registered_model_name: mortgage_default_classifier
   add_timestamp_to_run_name: true
+
   model_output_path: data/06_models/mlflow_model
   tracking_uri: sqlite:///mlflow.db
-  n_iter: 8
-  cv: 3
+
+  #Sem CV
+  n_iter: 20
   n_jobs: -1
+
+  # Model/hyperparameter selection is threshold-independent.
+  #só para logging
   scoring: f1
+  
   selection_metric: val_f1
+
   models:
-    - logistic_regression
     - random_forest
     - extra_trees
+    - gradient_boosting
+    - hist_gradient_boosting
+    - decision_tree
+    - logistic_regression

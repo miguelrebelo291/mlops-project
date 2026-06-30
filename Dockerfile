@@ -7,15 +7,15 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_COMPILE=1
 
+ENV MODEL_URI=data/06_models/mlflow_model
+ENV MODEL_METADATA_PATH=data/08_reporting/model_training_metadata.json
+ENV FEATURE_TRANSFORMERS_PATH=data/04_feature/feature_transformers.pkl
+
 COPY requirements-serving.txt .
 RUN pip install --no-cache-dir --no-compile -r requirements-serving.txt
 
 COPY src ./src
 COPY conf ./conf
-
-COPY data/04_feature/feature_transformers.pkl ./data/04_feature/feature_transformers.pkl
-COPY data/06_models/mlflow_model ./data/06_models/mlflow_model
-COPY data/08_reporting/model_training_metadata.json ./data/08_reporting/model_training_metadata.json
 
 EXPOSE 8000
 
