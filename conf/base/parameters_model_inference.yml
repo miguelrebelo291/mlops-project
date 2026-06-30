@@ -1,6 +1,0 @@
-model_inference:
-  model_uri: data/06_models/mlflow_model
-  target_column: default
-  id_column: loan_sequence_number
-  threshold: 0.5
-  test_year: 2006

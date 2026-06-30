@@ -1,5 +1,5 @@
 """
-This is a boilerplate pipeline 'data_quality'
+This is a boilerplate pipeline 'model_predict'
 generated using Kedro 1.3.1
 """
 

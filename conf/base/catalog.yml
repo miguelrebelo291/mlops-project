@@ -195,6 +195,10 @@ model_input_data_all:
   filepath: data/02_intermediate/model_input_data_all.parquet
 
 # ── Intermediates (legado 2005 — usado por data_quality, data_cleaning, feature_engineering) ──
+# NOTA: estas entradas (origination_data_named, performance_data_named, target_data,
+# model_input_data) parecem ser resíduo do pipeline data_ingestion original de
+# 2005-apenas, anterior à versão multi-ano. Não sei se algum pipeline atual ainda
+# as usa — NÃO REMOVI, confirma antes de apagar.
 
 origination_data_named:
   type: pandas.ParquetDataset
@@ -223,7 +227,7 @@ nsd_sample_raw:
 
 # ── Primary ──────────────────────────────────────────────────────────────────
 
-# Cleaned modeling dataset after data_cleaning pipeline (input da feature engineering)
+# Cleaned modeling dataset after data_cleaning pipeline (input do model_train)
 origination_data_cleaned:
   type: pandas.ParquetDataset
   filepath: data/03_primary/model_input_cleaned.parquet
@@ -233,7 +237,7 @@ origination_cleaning_statistics:
   type: json.JSONDataset
   filepath: data/08_reporting/data_cleaning_statistics.json
 
-# ── Feature engineering ──────────────────────────────────────────────────────
+# ── Feature engineering / model_train outputs ─────────────────────────────────
 
 features_train:
   type: pandas.ParquetDataset
@@ -247,55 +251,32 @@ feature_transformers:
   type: pickle.PickleDataset
   filepath: data/04_feature/feature_transformers.pkl
 
+# NOTA: feature_engineering_metrics e feature_store_metadata pertencem ao
+# pipeline feature_engineering original (não usado pelo teu model_train).
+# Mantido caso a equipa ainda use esse pipeline em paralelo — confirma.
 feature_engineering_metrics:
   type: json.JSONDataset
   filepath: data/08_reporting/feature_engineering_metrics.json
-
-# ── Feature store (Hopsworks) ─────────────────────────────────────────────────
 
 feature_store_metadata:
   type: json.JSONDataset
   filepath: data/08_reporting/feature_store_metadata.json
 
-# ── Feature engineering inference ────────────────────────────────────────────
+# ── model_predict (inference, raw origination only — no performance file) ────
 
-# Input de inferência: empréstimos novos a prever (placeholder: usa os dados limpos)
-# ── Inference raw input ──────────────────────────────────────────────────────
 raw_origination_data_inference:
   type: pandas.CSVDataset
-  filepath: data/01_raw/sample_orig_2006.txt
+  filepath: data/01_raw/sample_orig_2007.txt
   load_args:
     sep: "|"
     header: null
     low_memory: false
 
-raw_performance_data_inference:
-  type: pandas.CSVDataset
-  filepath: data/01_raw/sample_svcg_2006.txt
-  load_args:
-    sep: "|"
-    header: null
-    low_memory: false
-
-# ── Labeled inference ingestion outputs ──────────────────────────────────────
 origination_data_inference_named:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/origination_data_inference_named.parquet
 
-performance_data_inference_named:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/performance_data_inference_named.parquet
-
-target_data_inference:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/target_data_inference.parquet
-
-model_input_data_inference_labeled:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/model_input_data_inference_labeled.parquet
-
-# ── Labeled inference cleaning output ────────────────────────────────────────
-model_input_data_inference_cleaned:
+origination_data_inference_cleaned:
   type: pandas.ParquetDataset
   filepath: data/03_primary/model_input_data_inference_cleaned.parquet
 
@@ -303,16 +284,19 @@ inference_cleaning_statistics:
   type: json.JSONDataset
   filepath: data/08_reporting/inference_cleaning_statistics.json
 
-# ── Labeled inference features ───────────────────────────────────────────────
 features_inference:
   type: pandas.ParquetDataset
   filepath: data/04_feature/features_inference.parquet
 
-# ── Labeled inference predictions/evaluation ─────────────────────────────────
 model_inference_predictions:
   type: pandas.ParquetDataset
   filepath: data/07_model_output/model_inference_predictions.parquet
 
+# NOTA: estas duas entradas (evaluated_inference_predictions,
+# inference_evaluation_metrics) só são produzidas se chamares
+# evaluate_labeled_inference manualmente (não está no pipeline por
+# omissão, já que dados de produção reais não têm target). Mantidas
+# para esse uso opcional.
 evaluated_inference_predictions:
   type: pandas.ParquetDataset
   filepath: data/07_model_output/evaluated_inference_predictions.parquet
@@ -321,8 +305,20 @@ inference_evaluation_metrics:
   type: json.JSONDataset
   filepath: data/08_reporting/inference_evaluation_metrics.json
 
-#DEPOIS MUDEM QUANDO FIZEREM A PIPELINE ASR
-#################
+# NOTA: estas duas (target_data_inference, model_input_data_inference_labeled)
+# pertenciam à versão anterior do model_predict que usava performance_data_inference
+# (já removida do catálogo). Não são produzidas por nenhum node atual —
+# candidatas a remoção, mas não apaguei. Confirma antes de remover.
+target_data_inference:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/target_data_inference.parquet
+
+model_input_data_inference_labeled:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/model_input_data_inference_labeled.parquet
+
+# ── model_train / model_evaluate outputs ──────────────────────────────────────
+
 model_training_metrics:
   type: json.JSONDataset
   filepath: data/08_reporting/model_training_metrics.json
@@ -346,21 +342,19 @@ selected_model:
 train_metadata:
   type: json.JSONDataset
   filepath: data/08_reporting/train_metadata.json
-  
-##########################
 
+# ── model_explainability (SHAP) ────────────────────────────────────────────────
 
-#################
-#SHAP
 shap_metrics:
-  type: kedro_datasets.json.JSONDataset
+  type: json.JSONDataset
   filepath: data/08_reporting/shap_metrics.json
 
+# ── data_drift (not yet built) ─────────────────────────────────────────────────
 
 data_drift_report:
-  type: kedro_datasets.pandas.CSVDataset
+  type: pandas.CSVDataset
   filepath: data/08_reporting/data_drift_report.csv
 
 data_drift_metrics:
-  type: kedro_datasets.json.JSONDataset
+  type: json.JSONDataset
   filepath: data/08_reporting/data_drift_metrics.json
