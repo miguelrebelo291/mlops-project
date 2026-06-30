@@ -1,100 +1,122 @@
-# Mortgage Default
+# Running the Pipeline with Sample Data
 
-[![Powered by Kedro](https://img.shields.io/badge/powered_by-kedro-ffc900?logo=kedro)](https://kedro.org)
+This repository includes a small delivery sample dataset (~1,000 loans per year)
+so the full pipeline can be demonstrated without needing the complete Freddie Mac
+dataset files (which are several GB in size).
 
-## Overview
+---
 
-This is your new Kedro project, which was generated using `kedro 1.3.1`.
+## Requirements
 
-Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
+- Python 3.11
+- [uv](https://github.com/astral-sh/uv) for package management
+- Docker (for model serving)
 
-## Rules and guidelines
+---
 
-In order to get the best out of the template:
+## Setup
 
-* Don't remove any lines from the `.gitignore` file we provide
-* Make sure your results can be reproduced by following a [data engineering convention](https://docs.kedro.org/en/stable/faq/faq.html#what-is-data-engineering-convention)
-* Don't commit data to your repository
-* Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
+```bash
+# Clone the repository
+git clone https://github.com/miguelrebelo291/mlops-project
+cd mortgage-default
 
-## How to install dependencies
+# Create virtual environment and install dependencies
+uv sync
 
-Declare any dependencies in `requirements.txt` for `pip` installation.
-
-To install them, run:
-
-```
-pip install -r requirements.txt
-```
-
-## How to run your Kedro pipeline
-
-You can run your Kedro project with:
-
-```
-kedro run
+# Activate the virtual environment
+source .venv/bin/activate        # Linux/Mac
+.venv\Scripts\activate           # Windows (Git Bash: source .venv/Scripts/activate)
 ```
 
-## How to test your Kedro project
+---
 
-Have a look at the files `tests/test_run.py` and `tests/pipelines/data_science/test_pipeline.py` for instructions on how to write your tests. Run the tests as follows:
+## Running the Pipelines
 
-```
-pytest
-```
+All pipelines use the `--env delivery` flag, which points to the sample data
+in `data/01_raw/delivery/` instead of the full dataset.
 
-You can configure the coverage threshold in your project's `pyproject.toml` file under the `[tool.coverage.report]` section.
+### Step 1 — Training pipeline (data ingestion → cleaning → model training)
 
-## Project dependencies
-
-To see and update the dependency requirements for your project use `requirements.txt`. You can install the project requirements with `pip install -r requirements.txt`.
-
-[Further information about project dependencies](https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#project-specific-dependencies)
-
-## How to work with Kedro and notebooks
-
-> Note: Using `kedro jupyter` or `kedro ipython` to run your notebook provides these variables in scope: `catalog`, `context`, `pipelines` and `session`.
->
-> Jupyter, JupyterLab, and IPython are already included in the project requirements by default, so once you have run `pip install -r requirements.txt` you will not need to take any extra steps before you use them.
-
-### Jupyter
-To use Jupyter notebooks in your Kedro project, you need to install Jupyter:
-
-```
-pip install jupyter
+```bash
+export MLFLOW_TRACKING_URI="sqlite:///mlflow.db"
+kedro run --env delivery --pipeline training
 ```
 
-After installing Jupyter, you can start a local notebook server:
+### Step 2 — Model evaluation (temporal test set 2003+)
 
-```
-kedro jupyter notebook
-```
-
-### JupyterLab
-To use JupyterLab, you need to install it:
-
-```
-pip install jupyterlab
+```bash
+kedro run --env delivery --pipeline model_evaluate
 ```
 
-You can also start JupyterLab:
+### Step 3 — SHAP explainability
 
-```
-kedro jupyter lab
-```
-
-### IPython
-And if you want to run an IPython session:
-
-```
-kedro ipython
+```bash
+kedro run --env delivery --pipeline model_explainability
 ```
 
-### How to ignore notebook output cells in `git`
-To automatically strip out all output cell contents before committing to `git`, you can use tools like [`nbstripout`](https://github.com/kynan/nbstripout). For example, you can add a hook in `.git/config` with `nbstripout --install`. This will run `nbstripout` before anything is committed to `git`.
+### Step 4 — Inference / prediction (2007 loans, no ground truth)
 
-> *Note:* Your output cells will be retained locally.
+```bash
+kedro run --env delivery --pipeline model_predict
+```
 
-## Package your Kedro project
+### Step 5 — Data drift detection (Evidently, year by year)
 
-[Further information about building project documentation and packaging your project](https://docs.kedro.org/en/stable/tutorial/package_a_project.html)
+```bash
+kedro run --env delivery --pipeline data_drift
+```
+
+### Run everything sequentially
+
+```bash
+export MLFLOW_TRACKING_URI="sqlite:///mlflow.db"
+kedro run --env delivery --pipeline training
+kedro run --env delivery --pipeline model_evaluate
+kedro run --env delivery --pipeline model_explainability
+kedro run --env delivery --pipeline model_predict
+kedro run --env delivery --pipeline data_drift
+```
+
+---
+
+## Model Serving (Docker)
+
+Build and run the FastAPI serving container:
+
+```bash
+docker build -t mortgage-default-api .
+docker run -p 8000:8000 -d mortgage-default-api
+```
+
+Open the interactive API docs at: http://localhost:8000/docs
+
+Test the API with the provided notebook:
+
+```bash
+jupyter notebook notebooks/test_serving_api.ipynb
+```
+
+---
+
+## MLflow UI
+
+To inspect experiment runs, metrics, and model artifacts:
+
+```bash
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+
+Open: http://localhost:5000
+
+---
+
+## Notes
+
+- The sample data contains ~1,000 loans per year for origination files and
+  ~5,000 rows per year for performance files — sufficient to run the full
+  pipeline end to end, but results will differ from the full dataset.
+- The NSD (Non-Standard Dataset) sample is not included in the delivery
+  sample — the pipeline will run with Standard Dataset only.
+- Model performance metrics on the sample data will be lower than reported
+  in the full pipeline run, due to the reduced training set size.
