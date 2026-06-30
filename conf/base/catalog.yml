@@ -353,7 +353,7 @@ shap_metrics:
 
 data_drift_report:
   type: pandas.CSVDataset
-  filepath: data/08_reporting/data_drift_report.csv
+  filepath: data/08_reporting/data_drift_feature_report.csv
 
 data_drift_metrics:
   type: json.JSONDataset

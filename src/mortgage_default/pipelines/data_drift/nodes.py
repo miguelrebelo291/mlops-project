@@ -1,258 +1,223 @@
-from pathlib import Path
+"""Nodes for the data_drift pipeline.
 
-import matplotlib.pyplot as plt
-import numpy as np
+Compares the training feature distribution (reference: 2000-2002) against
+each post-training year (2003-2008) using Evidently's DataDriftPreset.
+
+Uses origination_data_cleaned (Standard + NSD, all years) as the data
+source — not features_inference — so the comparison includes the full
+loan population including ARM/interest-only products from the NSD,
+which are the most relevant for detecting the pre-crisis drift.
+"""
+import logging
+from pathlib import Path
+from typing import Any
+
 import pandas as pd
 
+from evidently import ColumnMapping
+from evidently.metric_preset import DataDriftPreset
+from evidently.report import Report
 
-EPSILON = 1e-6
+from mortgage_default.pipelines.model_train.nodes import (
+    apply_feature_transformers,
+    drop_unused_columns,
+    engineer_date_features,
+)
+
+logger = logging.getLogger(__name__)
+
+CATEGORICAL_FEATURES = [
+    "first_time_homebuyer_flag",
+    "occupancy_status",
+    "channel",
+    "prepayment_penalty_flag",
+    "amortization_type",
+    "property_state",
+    "property_type",
+    "loan_purpose",
+    "interest_only_indicator",
+]
+
+TARGET_COL = "default"
+ID_COL = "loan_sequence_number"
+DATE_FEATURES = [
+    "first_payment_date_year",
+    "first_payment_date_month",
+    "maturity_date_year",
+    "maturity_date_month",
+    "loan_term_months",
+]
 
 
-def _safe_distribution(values: pd.Series) -> pd.Series:
-    """Return normalized value counts with missing values included."""
-    values = values.astype("string").fillna("__MISSING__")
-    return values.value_counts(normalize=True)
+def _prepare_year_slice(
+    df: pd.DataFrame,
+    year: int,
+    feature_transformers: dict,
+    feature_columns: list[str],
+) -> pd.DataFrame:
+    """Extract one year from the cleaned dataset, apply transformations,
+    and return a float64 DataFrame aligned to feature_columns.
+    Excludes date-derived features to avoid trivial drift from time passing.
+    """
+    slice_df = df[df["year"] == year].drop(columns=["year"]).copy()
+
+    slice_df = drop_unused_columns(slice_df)
+    slice_df = engineer_date_features(slice_df)
+    slice_df = apply_feature_transformers(slice_df, feature_transformers)
+
+    slice_df = slice_df.drop(columns=[TARGET_COL, ID_COL], errors="ignore")
+    slice_df = slice_df.drop(columns=[c for c in DATE_FEATURES if c in slice_df.columns])
+
+    analysis_features = [c for c in feature_columns if c not in DATE_FEATURES]
+    slice_df = slice_df.reindex(columns=analysis_features, fill_value=0)
+    slice_df = slice_df.apply(pd.to_numeric, errors="coerce").fillna(0).astype("float64")
+
+    return slice_df
 
 
-def _psi_from_distributions(reference_pct: np.ndarray, current_pct: np.ndarray) -> float:
-    """Population Stability Index."""
-    reference_pct = np.where(reference_pct <= 0, EPSILON, reference_pct)
-    current_pct = np.where(current_pct <= 0, EPSILON, current_pct)
+def _build_column_mapping(feature_columns: list[str]) -> ColumnMapping:
+    cat_cols = [c for c in CATEGORICAL_FEATURES if c in feature_columns and c not in DATE_FEATURES]
+    num_cols = [c for c in feature_columns if c not in cat_cols and c not in DATE_FEATURES]
 
-    return float(
-        np.sum((current_pct - reference_pct) * np.log(current_pct / reference_pct))
+    column_mapping = ColumnMapping()
+    column_mapping.numerical_features = num_cols
+    column_mapping.categorical_features = cat_cols
+    return column_mapping
+
+
+def _run_evidently(
+    reference: pd.DataFrame,
+    current: pd.DataFrame,
+    column_mapping: ColumnMapping,
+) -> dict[str, Any]:
+    """Run DataDriftPreset and return the report as dict."""
+    report = Report(metrics=[DataDriftPreset()])
+    report.run(
+        reference_data=reference,
+        current_data=current,
+        column_mapping=column_mapping,
     )
-
-
-def _js_distance_from_distributions(reference_pct: np.ndarray, current_pct: np.ndarray) -> float:
-    """Jensen-Shannon distance using base-2 logarithms."""
-
-    reference_pct = np.where(reference_pct <= 0, EPSILON, reference_pct)
-    current_pct = np.where(current_pct <= 0, EPSILON, current_pct)
-
-    reference_pct = reference_pct / reference_pct.sum()
-    current_pct = current_pct / current_pct.sum()
-
-    midpoint = 0.5 * (reference_pct + current_pct)
-
-    kl_ref = np.sum(reference_pct * np.log2(reference_pct / midpoint))
-    kl_cur = np.sum(current_pct * np.log2(current_pct / midpoint))
-
-    js_divergence = 0.5 * (kl_ref + kl_cur)
-
-    return float(np.sqrt(js_divergence))
-
-
-def _numeric_drift(
-    reference: pd.Series,
-    current: pd.Series,
-    bins: int,
-) -> tuple[float, float]:
-    """Calculate PSI and JS distance for a numeric feature using reference quantile bins."""
-
-    reference_numeric = pd.to_numeric(reference, errors="coerce")
-    current_numeric = pd.to_numeric(current, errors="coerce")
-
-    reference_numeric = reference_numeric.replace([np.inf, -np.inf], np.nan).dropna()
-    current_numeric = current_numeric.replace([np.inf, -np.inf], np.nan).dropna()
-
-    if reference_numeric.empty or current_numeric.empty:
-        return 0.0, 0.0
-
-    breakpoints = np.nanquantile(
-        reference_numeric,
-        np.linspace(0, 1, bins + 1),
-    )
-    breakpoints = np.unique(breakpoints)
-
-    if len(breakpoints) <= 2:
-        return _categorical_drift(reference, current)
-
-    breakpoints[0] = -np.inf
-    breakpoints[-1] = np.inf
-
-    reference_counts, _ = np.histogram(reference_numeric, bins=breakpoints)
-    current_counts, _ = np.histogram(current_numeric, bins=breakpoints)
-
-    reference_pct = reference_counts / max(reference_counts.sum(), 1)
-    current_pct = current_counts / max(current_counts.sum(), 1)
-
-    psi = _psi_from_distributions(reference_pct, current_pct)
-    js_distance = _js_distance_from_distributions(reference_pct, current_pct)
-
-    return psi, js_distance
-
-
-def _categorical_drift(
-    reference: pd.Series,
-    current: pd.Series,
-) -> tuple[float, float]:
-    """Calculate PSI and JS distance for categorical or low-cardinality features."""
-
-    reference_dist = _safe_distribution(reference)
-    current_dist = _safe_distribution(current)
-
-    categories = sorted(set(reference_dist.index).union(set(current_dist.index)))
-
-    reference_pct = np.array([reference_dist.get(category, 0.0) for category in categories])
-    current_pct = np.array([current_dist.get(category, 0.0) for category in categories])
-
-    psi = _psi_from_distributions(reference_pct, current_pct)
-    js_distance = _js_distance_from_distributions(reference_pct, current_pct)
-
-    return psi, js_distance
-
-
-def _plot_psi_report(
-    drift_report: pd.DataFrame,
-    output_path: Path,
-    threshold: float,
-    top_n: int,
-) -> None:
-    """Create professor-style horizontal PSI bar plot with threshold line."""
-
-    plot_data = drift_report.head(top_n).iloc[::-1]
-
-    fig, ax = plt.subplots(figsize=(10, 7))
-
-    ax.barh(plot_data["feature"], plot_data["psi"])
-    ax.axvline(threshold, color="red", linestyle="--", label=f"Threshold = {threshold}")
-
-    ax.set_xlabel("PSI")
-    ax.set_ylabel("Feature")
-    ax.set_title("Top Feature Drift by PSI")
-    ax.legend()
-
-    plt.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    return report.as_dict()
 
 
 def analyze_data_drift(
-    reference_features: pd.DataFrame,
-    current_features: pd.DataFrame,
+    origination_data_cleaned: pd.DataFrame,
+    features_train: pd.DataFrame,
+    feature_transformers: dict,
+    train_metadata: dict,
     parameters: dict,
 ) -> tuple[pd.DataFrame, dict]:
-    """Compare reference training features against current inference features."""
+    """Detect feature drift year by year (2003-2008) vs training (2000-2002).
 
-    target_col = parameters.get("target_column", "default")
-    id_col = parameters.get("id_column", "loan_sequence_number")
-    bins = int(parameters.get("bins", 10))
-    drift_threshold = float(parameters.get("drift_threshold", 0.20))
-    top_n_plot = int(parameters.get("top_n_plot", 20))
-    max_unique_as_categorical = int(parameters.get("max_unique_as_categorical", 20))
+    Uses origination_data_cleaned (Standard + NSD) so the comparison
+    includes the full loan population — ARM, interest-only, and other
+    non-standard products that drove pre-crisis risk.
+
+    Date-derived features (first_payment_date_year, maturity_date_year,
+    etc.) are excluded because they drift trivially as time passes, which
+    would distort the narrative.
+
+    Args:
+        origination_data_cleaned: full cleaned dataset, all years, Standard
+            + NSD.
+        features_train: transformed training features (reference, 2000-2002),
+            used as the Evidently reference distribution.
+        feature_transformers: artifact from model_train (fitted on 2000-2002).
+        train_metadata: metadata from model_train (feature_columns, etc.)
+        parameters: data_drift parameter group.
+    Returns:
+        drift_report: DataFrame with per-feature drift scores per year.
+        drift_metrics: dict with dataset-level drift summary per year.
+    """
+    feature_columns = train_metadata["feature_columns"]
     output_dir = Path(parameters.get("output_dir", "data/08_reporting"))
-
-    reference_label = parameters.get("reference_label", "reference")
-    current_label = parameters.get("current_label", "current")
-
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    reference = reference_features.copy()
-    current = current_features.copy()
+    test_years = parameters.get("test_years", [2003, 2004, 2005, 2006, 2007, 2008])
 
-    reference = reference.drop(columns=[target_col, id_col], errors="ignore")
-    current = current.drop(columns=[target_col, id_col], errors="ignore")
+    # Prepare reference — training features, drop date columns + target/ID
+    reference = features_train.drop(columns=[TARGET_COL, ID_COL], errors="ignore")
+    reference = reference.drop(columns=[c for c in DATE_FEATURES if c in reference.columns])
+    analysis_features = [c for c in feature_columns if c not in DATE_FEATURES]
+    reference = reference.reindex(columns=analysis_features, fill_value=0)
+    reference = reference.apply(pd.to_numeric, errors="coerce").fillna(0).astype("float64")
 
-    common_features = sorted(set(reference.columns).intersection(set(current.columns)))
+    column_mapping = _build_column_mapping(feature_columns)
 
-    rows = []
-
-    for feature in common_features:
-        reference_col = reference[feature]
-        current_col = current[feature]
-
-        reference_missing_rate = float(reference_col.isna().mean())
-        current_missing_rate = float(current_col.isna().mean())
-
-        reference_numeric = pd.to_numeric(reference_col, errors="coerce")
-        current_numeric = pd.to_numeric(current_col, errors="coerce")
-
-        numeric_ratio_reference = reference_numeric.notna().mean()
-        numeric_ratio_current = current_numeric.notna().mean()
-
-        n_unique = max(
-            reference_col.nunique(dropna=True),
-            current_col.nunique(dropna=True),
-        )
-
-        is_numeric_feature = (
-            numeric_ratio_reference > 0.95
-            and numeric_ratio_current > 0.95
-            and n_unique > max_unique_as_categorical
-        )
-
-        if is_numeric_feature:
-            feature_type = "numeric"
-            psi, js_distance = _numeric_drift(reference_col, current_col, bins=bins)
-
-            reference_mean = float(reference_numeric.mean())
-            current_mean = float(current_numeric.mean())
-
-        else:
-            feature_type = "categorical"
-            psi, js_distance = _categorical_drift(reference_col, current_col)
-
-            reference_mean = None
-            current_mean = None
-
-        rows.append(
-            {
-                "feature": feature,
-                "feature_type": feature_type,
-                "psi": float(psi),
-                "js_distance": float(js_distance),
-                "reference_missing_rate": reference_missing_rate,
-                "current_missing_rate": current_missing_rate,
-                "missing_rate_difference": current_missing_rate - reference_missing_rate,
-                "reference_mean": reference_mean,
-                "current_mean": current_mean,
-                "drift_detected": bool(psi >= drift_threshold),
-            }
-        )
-
-    drift_report = pd.DataFrame(rows)
-
-    if drift_report.empty:
-        metrics = {
-            "reference_label": reference_label,
-            "current_label": current_label,
-            "n_reference_rows": int(len(reference_features)),
-            "n_current_rows": int(len(current_features)),
-            "n_features_compared": 0,
-            "drift_threshold": drift_threshold,
-            "n_drifted_features": 0,
-            "share_drifted_features": 0.0,
-            "top_drifted_features": [],
-            "psi_plot_path": None,
-        }
-        return drift_report, metrics
-
-    drift_report = drift_report.sort_values("psi", ascending=False).reset_index(drop=True)
-
-    plot_path = output_dir / "data_drift_psi_plot.png"
-    _plot_psi_report(
-        drift_report=drift_report,
-        output_path=plot_path,
-        threshold=drift_threshold,
-        top_n=top_n_plot,
+    logger.info(
+        "Reference: %d loans (2000-2002) | Analysing years: %s",
+        len(reference), test_years,
     )
 
-    n_drifted = int(drift_report["drift_detected"].sum())
+    all_rows = []
+    yearly_summary = []
 
+    for year in test_years:
+        current = _prepare_year_slice(
+            origination_data_cleaned, year, feature_transformers, feature_columns
+        )
+
+        if current.empty:
+            logger.warning("No data found for year %d — skipping", year)
+            continue
+
+        logger.info("Running drift for %d (%d loans)...", year, len(current))
+
+        report_dict = _run_evidently(reference, current, column_mapping)
+
+        dataset_result = report_dict["metrics"][0]["result"]
+        drift_by_columns = report_dict["metrics"][1]["result"]["drift_by_columns"]
+
+        for feature, details in drift_by_columns.items():
+            all_rows.append({
+                "year": year,
+                "feature": feature,
+                "drift_detected": bool(details["drift_detected"]),
+                "drift_score": float(details["drift_score"]),
+                "stattest_name": details.get("stattest_name", "N/A"),
+            })
+
+        n_drifted = int(dataset_result["number_of_drifted_columns"])
+        n_total = int(dataset_result["number_of_columns"])
+
+        yearly_summary.append({
+            "year": year,
+            "n_loans": len(current),
+            "dataset_drift_detected": bool(dataset_result["dataset_drift"]),
+            "drift_share": float(dataset_result["drift_share"]),
+            "n_drifted_features": n_drifted,
+            "n_features": n_total,
+        })
+
+        logger.info(
+            "%d: %d/%d features drifted (%.0f%%) — dataset_drift=%s",
+            year, n_drifted, n_total,
+            dataset_result["drift_share"] * 100,
+            dataset_result["dataset_drift"],
+        )
+
+    # Save HTML for the most recent year (2007) as the main report
+    current_2007 = _prepare_year_slice(
+        origination_data_cleaned, 2007, feature_transformers, feature_columns
+    )
+    full_report = Report(metrics=[DataDriftPreset()])
+    full_report.run(
+        reference_data=reference,
+        current_data=current_2007,
+        column_mapping=column_mapping,
+    )
+    html_path = output_dir / "data_drift_report.html"
+    full_report.save_html(str(html_path))
+    logger.info("Evidently HTML report (2007) saved to %s", html_path)
+
+    drift_report = pd.DataFrame(all_rows)
     metrics = {
-        "reference_label": reference_label,
-        "current_label": current_label,
-        "n_reference_rows": int(len(reference_features)),
-        "n_current_rows": int(len(current_features)),
-        "n_features_compared": int(len(common_features)),
-        "drift_threshold": drift_threshold,
-        "n_drifted_features": n_drifted,
-        "share_drifted_features": float(n_drifted / len(drift_report)),
-        "top_drifted_features": drift_report.head(10)[
-            ["feature", "feature_type", "psi", "js_distance", "drift_detected"]
-        ].to_dict(orient="records"),
-        "psi_plot_path": str(plot_path),
+        "reference_label": parameters.get("reference_label", "train_2000_2002"),
+        "n_reference_rows": int(len(reference)),
+        "test_years": test_years,
+        "yearly_summary": yearly_summary,
+        "html_report_path": str(html_path),
+        "features_excluded_from_drift": DATE_FEATURES,
     }
 
     return drift_report, metrics
