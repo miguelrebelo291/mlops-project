@@ -1,7 +1,6 @@
-model_explainability:
-  model_uri: data/06_models/mlflow_model
-  metadata_path: data/08_reporting/model_training_metadata.json
+mmodel_explainability:
   output_dir: data/08_reporting
-  sample_size: 1000
+  sample_size: 200
   random_state: 42
   max_display: 20
+  tracking_uri: sqlite:///mlflow.db

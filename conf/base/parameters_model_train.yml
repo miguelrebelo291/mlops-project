@@ -6,8 +6,9 @@ model_train:
   validation_size: 0.2
   random_state: 42
   threshold: 0.5
-  threshold_strategy: maximize_f2
-  beta: 2.0
+  selection_metric: val_f1
+  threshold_strategy: maximize_f1
+  beta: 1.0
   experiment_name: mortgage_default_model_search3
   run_name: holdout_random_search_tree_models
   registered_model_name: mortgage_default_classifier
@@ -15,9 +16,8 @@ model_train:
   model_output_path: data/06_models/mlflow_model
   tracking_uri: sqlite:///mlflow.db
   n_iter: 5
-  n_jobs: 2
+  n_jobs: 3
   scoring: average_precision
-  selection_metric: val_average_precision
   models:
     - logistic_regression
     - decision_tree
