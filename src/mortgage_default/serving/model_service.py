@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from mortgage_default.pipelines.data_cleaning.nodes import clean_origination_data
-from mortgage_default.pipelines.feature_engineering.nodes import (
+from mortgage_default.pipelines.model_train.nodes import (  # CHANGED: was feature_engineering.nodes
     apply_feature_transformers,
     drop_unused_columns,
     engineer_date_features,
