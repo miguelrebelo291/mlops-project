@@ -76,15 +76,8 @@ PERFORMANCE_COLUMNS = [
 
 DEFAULT_CODES = ["02", "03", "09"]
 
-
 def assign_origination_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
-    """Assign column names to the origination data.
-
-    Args:
-        raw_data: raw origination dataset without column names.
-    Returns:
-        DataFrame with assigned column names.
-    """
+    """Assign column names to the origination data."""
     raw_data.columns = ORIGINATION_COLUMNS
     return raw_data
 
@@ -92,37 +85,49 @@ def assign_origination_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
 def assign_performance_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
     """Assign column names to the performance data.
 
-    Args:
-        raw_data: raw performance dataset without column names.
-    Returns:
-        DataFrame with assigned column names.
+    Supports both:
+    - full 32-column performance files
+    - lightweight 2-column files loaded with usecols [0, 8]
     """
+    if raw_data.shape[1] == 2:
+        raw_data.columns = [
+            "loan_sequence_number",
+            "zero_balance_code",
+        ]
+        return raw_data
+
     raw_data.columns = PERFORMANCE_COLUMNS
-    raw_data["current_loan_delinquency_status"] = (
-        raw_data["current_loan_delinquency_status"].astype(str)
-    )
+
+    if "current_loan_delinquency_status" in raw_data.columns:
+        raw_data["current_loan_delinquency_status"] = (
+            raw_data["current_loan_delinquency_status"].astype("string")
+        )
+
     return raw_data
 
 
 def create_target_variable(performance_data: pd.DataFrame) -> pd.DataFrame:
-    """Create binary default target from loan performance data.
+    """Aggregate performance data to loan level and create binary default target.
 
-    default = 1 if the loan has a serious zero-balance/default event:
-    02 = Third Party Sale
-    03 = Short Sale or Charge Off
-    09 = REO Disposition / foreclosure
+    A loan is considered defaulted if zero_balance_code is ever 02, 03, or 09.
     """
-    df = performance_data.copy()
 
-    df["zero_balance_code_clean"] = (
-        pd.to_numeric(df["zero_balance_code"], errors="coerce")
+    zero_balance_code_clean = (
+        pd.to_numeric(performance_data["zero_balance_code"], errors="coerce")
         .astype("Int64")
         .astype("string")
         .str.zfill(2)
     )
 
+    target_source = pd.DataFrame(
+        {
+            "loan_sequence_number": performance_data["loan_sequence_number"],
+            "zero_balance_code_clean": zero_balance_code_clean,
+        }
+    )
+
     target = (
-        df.groupby("loan_sequence_number")["zero_balance_code_clean"]
+        target_source.groupby("loan_sequence_number")["zero_balance_code_clean"]
         .apply(lambda codes: int(codes.isin(DEFAULT_CODES).any()))
         .reset_index()
         .rename(columns={"zero_balance_code_clean": "default"})
@@ -135,15 +140,12 @@ def join_origination_with_target(
     origination_data: pd.DataFrame,
     target_data: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Join origination data with known target labels."""
+    """Join origination data with known loan-level target labels."""
     joined = origination_data.merge(
         target_data,
         on="loan_sequence_number",
         how="inner",
     )
-
-    if joined["default"].isna().any():
-        raise ValueError("Missing target values after joining origination and target.")
 
     joined["default"] = joined["default"].astype(int)
 
@@ -151,15 +153,16 @@ def join_origination_with_target(
 
 
 def concatenate_years(*dfs: pd.DataFrame, years: list[int] = None) -> pd.DataFrame:
-    """Concatena os datasets de múltiplos anos, adicionando coluna 'year'."""
+    """Concatenate datasets from multiple years, adding year column."""
     if years is None:
         from mortgage_default.pipelines.data_ingestion.pipeline import YEARS
+
         years = YEARS
-    
+
     labeled = []
+
     for df, year in zip(dfs, years):
-        df = df.copy()
         df["year"] = year
         labeled.append(df)
-    
+
     return pd.concat(labeled, ignore_index=True)

@@ -341,3 +341,12 @@ model_search_results:
 shap_metrics:
   type: kedro_datasets.json.JSONDataset
   filepath: data/08_reporting/shap_metrics.json
+
+
+data_drift_report:
+  type: kedro_datasets.pandas.CSVDataset
+  filepath: data/08_reporting/data_drift_report.csv
+
+data_drift_metrics:
+  type: kedro_datasets.json.JSONDataset
+  filepath: data/08_reporting/data_drift_metrics.json

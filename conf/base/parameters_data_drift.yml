@@ -1,0 +1,13 @@
+data_drift:
+  target_column: default
+  id_column: loan_sequence_number
+
+  reference_label: "2005 training features"
+  current_label: "out-of-year inference features"
+
+  output_dir: data/08_reporting
+
+  bins: 10
+  drift_threshold: 0.20
+  top_n_plot: 20
+  max_unique_as_categorical: 20
