@@ -1,21 +1,27 @@
 model_train:
+  train_cutoff_year: 2002
+  test_start_year: 2003
   target_column: default
   id_column: loan_sequence_number
   validation_size: 0.2
   random_state: 42
   threshold: 0.5
+  threshold_strategy: maximize_f2
+  beta: 2.0
   experiment_name: mortgage_default_model_search3
-  run_name: random_search_three_models
+  run_name: holdout_random_search_tree_models
   registered_model_name: mortgage_default_classifier
   add_timestamp_to_run_name: true
   model_output_path: data/06_models/mlflow_model
   tracking_uri: sqlite:///mlflow.db
-  n_iter: 8
-  cv: 3
-  n_jobs: -1
-  scoring: f1
-  selection_metric: val_f1
+  n_iter: 5
+  n_jobs: 2
+  scoring: average_precision
+  selection_metric: val_average_precision
   models:
     - logistic_regression
+    - decision_tree
     - random_forest
     - extra_trees
+    - gradient_boosting
+    - hist_gradient_boosting

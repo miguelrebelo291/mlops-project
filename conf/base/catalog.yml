@@ -216,6 +216,11 @@ model_input_validated:
   type: pandas.ParquetDataset
   filepath: data/02_intermediate/model_input_validated.parquet
 
+# nsd sample
+nsd_sample_raw:
+  type: pandas.ParquetDataset
+  filepath: data/02_intermediate/nsd_sample.parquet
+
 # ── Primary ──────────────────────────────────────────────────────────────────
 
 # Cleaned modeling dataset after data_cleaning pipeline (input da feature engineering)
@@ -333,6 +338,15 @@ model_test_predictions:
 model_search_results:
   type: pandas.ParquetDataset
   filepath: data/08_reporting/model_search_results.parquet
+
+selected_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/selected_model.pkl
+
+train_metadata:
+  type: json.JSONDataset
+  filepath: data/08_reporting/train_metadata.json
+  
 ##########################
 
 

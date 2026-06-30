@@ -9,18 +9,19 @@ from .nodes import (
     create_target_variable,
     join_origination_with_target,
     concatenate_years,
+    prepare_nsd_sample,
 )
 import os
 
 
 def _get_years() -> list[int]:
-    """Years to ingest.
-    """
+    """Years to ingest."""
     raw_years = os.getenv("MORTGAGE_DATA_YEARS", "2005")
     return [int(year.strip()) for year in raw_years.split(",") if year.strip()]
 
 
 YEARS = _get_years()
+
 
 def create_pipeline(**kwargs) -> Pipeline:
     nodes = []
@@ -53,11 +54,24 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
         ]
 
-    # Junta todos os anos num único dataset com coluna 'year'
+    # Prepara o NSD sample (já tem target e coluna 'year') para entrar
+    # na mesma concatenação que os anos do Standard Dataset.
+    nodes.append(
+        Node(
+            func=prepare_nsd_sample,
+            inputs="nsd_sample_raw",
+            outputs="nsd_sample_prepared",
+            name="prepare_nsd_sample_node",
+        )
+    )
+
+    # Junta todos os anos do Standard + o NSD num único dataset
+    standard_inputs = [f"model_input_data_{year}" for year in YEARS]
+
     nodes.append(
         Node(
             func=concatenate_years,
-            inputs=[f"model_input_data_{year}" for year in YEARS],
+            inputs=standard_inputs + ["nsd_sample_prepared"],
             outputs="model_input_data_all",
             name="concatenate_years_node",
         )

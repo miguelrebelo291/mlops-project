@@ -76,6 +76,7 @@ PERFORMANCE_COLUMNS = [
 
 DEFAULT_CODES = ["02", "03", "09"]
 
+
 def assign_origination_columns_names(raw_data: pd.DataFrame) -> pd.DataFrame:
     """Assign column names to the origination data."""
     raw_data.columns = ORIGINATION_COLUMNS
@@ -111,7 +112,6 @@ def create_target_variable(performance_data: pd.DataFrame) -> pd.DataFrame:
 
     A loan is considered defaulted if zero_balance_code is ever 02, 03, or 09.
     """
-
     zero_balance_code_clean = (
         pd.to_numeric(performance_data["zero_balance_code"], errors="coerce")
         .astype("Int64")
@@ -152,8 +152,53 @@ def join_origination_with_target(
     return joined
 
 
+def prepare_nsd_sample(nsd_sample: pd.DataFrame) -> pd.DataFrame:
+    """Aligns the pre-processed Non-Standard Dataset sample with the schema
+    expected by concatenate_years.
+
+    The NSD sample already has 'year' and 'default' computed (done offline
+    in the extraction notebook), and an extra 'source' column. We keep only
+    the columns shared with the Standard Dataset pipeline output, plus
+    'year' and 'default', and add a placeholder 'mi_cancellation_indicator'
+    column (missing in the NSD raw files) so the schemas align on concat.
+
+    Args:
+        nsd_sample: pre-extracted NSD sample with origination + target + year.
+    Returns:
+        DataFrame aligned to the Standard Dataset's column schema.
+    """
+    df = nsd_sample.copy()
+
+    # NSD origination files don't have mi_cancellation_indicator — add as null
+    if "mi_cancellation_indicator" not in df.columns:
+        df["mi_cancellation_indicator"] = pd.NA
+
+    # Drop helper column not present in the Standard Dataset pipeline
+    if "source" in df.columns:
+        df = df.drop(columns=["source"])
+
+    return df
+
+
 def concatenate_years(*dfs: pd.DataFrame, years: list[int] = None) -> pd.DataFrame:
-    """Concatenate datasets from multiple years, adding year column."""
+    """Concatenate datasets from multiple years, adding a 'year' column
+    where missing.
+
+    Standard Dataset DataFrames don't carry a 'year' column — it's assigned
+    here based on position in `years`. The NSD sample already has its own
+    per-row 'year' column (since it spans multiple years internally) and
+    is passed through unchanged.
+
+    Args:
+        *dfs: DataFrames to concatenate. The last one may be the
+            pre-tagged NSD sample (already has 'year'); the rest are
+            assumed to be Standard Dataset DataFrames, one per year,
+            matched positionally against `years`.
+        years: years corresponding to the Standard Dataset DataFrames,
+            in order. Defaults to the pipeline's YEARS constant.
+    Returns:
+        Combined DataFrame with a 'year' column on every row.
+    """
     if years is None:
         from mortgage_default.pipelines.data_ingestion.pipeline import YEARS
 
@@ -162,7 +207,32 @@ def concatenate_years(*dfs: pd.DataFrame, years: list[int] = None) -> pd.DataFra
     labeled = []
 
     for df, year in zip(dfs, years):
-        df["year"] = year
+        if "year" not in df.columns:
+            df = df.copy()
+            df["year"] = year
         labeled.append(df)
 
-    return pd.concat(labeled, ignore_index=True)
+    # Any remaining DataFrames (e.g. the NSD sample) already have 'year'
+    remaining = dfs[len(years):]
+    labeled.extend(remaining)
+
+    result = pd.concat(labeled, ignore_index=True)
+
+    # Some columns come as mixed types across Standard/NSD sources
+    # (e.g. int in one, str in the other) because of how each source
+    # encodes sentinel/code values. Force them to string to avoid
+    # pyarrow conversion errors when saving to Parquet.
+    mixed_type_cols = [
+        "special_eligibility_program",
+        "relief_refinance_indicator",
+        "property_valuation_method",
+        "interest_only_indicator",
+        "mi_cancellation_indicator",
+        "super_conforming_flag",
+        "pre_relief_refinance_loan_sequence_number",
+    ]
+    for col in mixed_type_cols:
+        if col in result.columns:
+            result[col] = result[col].astype("string")
+
+    return result
